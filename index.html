@@ -122,6 +122,7 @@ const ADMIN_PIN="12345";
 const ADMIN_WA="6288293064112";
 const MAX_WINNER=10;
 
+// HADIAH
 const prizes=[
  {label:"ZONK",win:false},
  {label:"DANA 5K",win:true},
@@ -131,10 +132,11 @@ const prizes=[
  {label:"VOUCHER FF",win:true}
 ];
 
+// ===== PERBAIKAN CODE SPIN =====
 const CODES={
  XREZ1:1,
  XREZ3:3,
- VIP5:5,
+ VIP5:5
 };
 
 // ================= STORAGE =================
@@ -143,7 +145,6 @@ const deviceId=localStorage.getItem("devId") || (()=>{
  localStorage.setItem("devId",id);
  return id;
 })();
-
 let spinData=JSON.parse(localStorage.getItem("spinData")||"{}");
 let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
 let winners=JSON.parse(localStorage.getItem("winners")||"[]");
@@ -151,14 +152,8 @@ let lockedName=localStorage.getItem("lockedName");
 let hasWon=localStorage.getItem("hasWon")==="true";
 let lastPrize=null;
 
-// default spin
-if(spinData[deviceId]==null){ spinData[deviceId]=1; localStorage.setItem("spinData",JSON.stringify(spinData)); }
-
-// lock nama
-if(lockedName){
- document.getElementById("name").value=lockedName;
- document.getElementById("name").disabled=true;
-}
+if(spinData[deviceId]==null){ spinData[deviceId]=1; saveData(); }
+if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
 // ================= DRAW WHEEL =================
 const canvas=document.getElementById("wheel");
@@ -197,62 +192,59 @@ function saveData(){
 
 // ================= SPIN =================
 let rot=0,lock=false;
-const spinBtn=document.getElementById("spinBtn");
-spinBtn.addEventListener("click",()=>{
+document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
  if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  if(winners.length>=MAX_WINNER) return alert("Giveaway selesai!");
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
- if(!lockedName){
-  lockedName=name;
-  document.getElementById("name").disabled=true;
- }
- // apply code
- const codeEl=document.getElementById("code");
- const code=codeEl.value.trim().toUpperCase();
- if(code && CODES[code] && !usedCodes[deviceId+code]){
+ if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; }
+
+ // ✅ Penerapan code per user
+ const codeInput=document.getElementById("code");
+ const code=codeInput.value.trim().toUpperCase();
+ if(code && CODES[code] && !usedCodes[deviceId+"_"+code]){
   spinData[deviceId]+=CODES[code];
-  usedCodes[deviceId+code]=true;
-  codeEl.value="";
+  usedCodes[deviceId+"_"+code]=true;
+  codeInput.value="";
   saveData();
   updateInfo();
  }
 
-spinData[deviceId]--;
-saveData();
-updateInfo();
-
-// pilih prize
-let idx;
-if(hasWon){
- const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
- idx=z[Math.floor(Math.random()*z.length)];
-}else{
- idx=Math.floor(Math.random()*prizes.length);
-}
-
-const anglePer=360/prizes.length;
-const target=90-(idx*anglePer)-anglePer/2;
-rot+=360*6+(target-(rot%360));
-lock=true;
-canvas.style.transform=`rotate(${rot}deg)`;
-
-setTimeout(()=>{
- lock=false;
- lastPrize=prizes[idx];
- document.getElementById("result").innerText=
-  `🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
- document.getElementById("log").innerHTML+=
-  `<div>${lockedName} → ${lastPrize.label}</div>`;
- if(lastPrize.win && !hasWon){
-  hasWon=true;
-  winners.push({name:lockedName,prize:lastPrize.label});
-  document.getElementById("claimBtn").style.display="block";
- }
+ spinData[deviceId]--;
  saveData();
  updateInfo();
-},4200);
+
+ // pilih prize
+ let idx;
+ if(hasWon){
+  const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
+  idx=z[Math.floor(Math.random()*z.length)];
+ }else{
+  idx=Math.floor(Math.random()*prizes.length);
+ }
+
+ const anglePer=360/prizes.length;
+ const target=90-(idx*anglePer)-anglePer/2;
+ rot+=360*6+(target-(rot%360));
+ lock=true;
+ canvas.style.transform=`rotate(${rot}deg)`;
+
+ setTimeout(()=>{
+  lock=false;
+  lastPrize=prizes[idx];
+  document.getElementById("result").innerText=
+   `🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
+  document.getElementById("log").innerHTML+=
+   `<div>${lockedName} → ${lastPrize.label}</div>`;
+  if(lastPrize.win && !hasWon){
+   hasWon=true;
+   winners.push({name:lockedName,prize:lastPrize.label});
+   document.getElementById("claimBtn").style.display="block";
+  }
+  saveData();
+  updateInfo();
+ },4200);
 });
 
 // ================= CLAIM =================
@@ -270,9 +262,7 @@ document.getElementById("title").addEventListener("click",()=>{
  tap++;
  if(tap>=5){
   const pin=prompt("PIN ADMIN:");
-  if(pin===ADMIN_PIN){
-   document.getElementById("adminPanel").style.display="block";
-  }
+  if(pin===ADMIN_PIN) document.getElementById("adminPanel").style.display="block";
   tap=0;
  }
 });
@@ -285,7 +275,7 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
 document.getElementById("resetBtn").addEventListener("click",()=>{
  if(!confirm("RESET SEMUA DATA?")) return;
  localStorage.clear();
-location.reload();
+ location.reload();
 });
 </script>
 </body>
