@@ -2,168 +2,144 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>XREZZKYSTORE RNG</title>
+
 <style>
 body{
- background:#0b0b0b;
- color:#fff;
- font-family:Arial;
- text-align:center;
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#0f0f0f;
+  font-family:Arial, sans-serif;
+  color:white;
+}
+
+.container{
+  position:relative;
+  width:320px;
+  text-align:center;
 }
 
 #wheelBox{
- position:relative;
- width:300px;
- height:300px;
- margin:20px auto;
+  position:relative;
+  width:300px;
+  height:300px;
+  margin:auto;
 }
 
-/* RODA */
-#canvas{
- width:100%;
- height:100%;
- border-radius:50%;
- transition:transform 4s cubic-bezier(0.25,0.1,0.25,1);
+#wheel{
+  width:100%;
+  height:100%;
+  border-radius:50%;
+  border:6px solid #fff;
+  transition:transform 4s cubic-bezier(0.17, 0.67, 0.22, 0.99);
 }
 
-/* PANAH SVG ⬇️ (ANTI KETIBAN) */
+/* PANAH FIX */
 #arrow{
- position:absolute;
- top:-10px;
- left:50%;
- transform:translateX(-50%);
- width:40px;
- height:40px;
- z-index:99999;
- pointer-events:none;
-}
-
-input,button{
- padding:8px;
- margin:5px;
- border-radius:6px;
- border:none;
+  position:absolute;
+  bottom:-12px;
+  left:50%;
+  transform:translateX(-50%);
+  width:0;
+  height:0;
+  border-left:14px solid transparent;
+  border-right:14px solid transparent;
+  border-top:24px solid #ffffff;
+  z-index:20;
 }
 
 button{
- background:#25d366;
- color:#000;
- font-weight:bold;
- cursor:pointer;
+  margin-top:20px;
+  padding:12px 25px;
+  font-size:16px;
+  font-weight:bold;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background:#25d366;
+  color:#000;
 }
 
-#log{
- max-width:300px;
- margin:15px auto;
- text-align:left;
- font-size:13px;
+#result{
+  margin-top:15px;
+  font-size:18px;
+  font-weight:bold;
 }
 </style>
 </head>
 
 <body>
+<div class="container">
 
-<h2>XREZZKYSTORE GIVEAWAY</h2>
+  <div id="wheelBox">
+    <canvas id="wheel" width="300" height="300"></canvas>
+    <div id="arrow"></div>
+  </div>
 
-<div id="wheelBox">
+  <button onclick="spin()">SPIN</button>
+  <div id="result">Hasil: -</div>
 
- <!-- PANAH SVG -->
- <svg id="arrow" viewBox="0 0 100 100">
-  <polygon points="50,90 10,20 90,20" fill="#ff2e2e"/>
- </svg>
-
- <canvas id="canvas" width="300" height="300"></canvas>
 </div>
 
-<input id="name" placeholder="Nama kamu">
-<br>
-<button onclick="spin()">SPIN</button>
-
-<p id="result"></p>
-<button id="claimBtn" style="display:none" onclick="claim()">KLAIM HADIAH</button>
-
-<h3>Pemenang</h3>
-<div id="log"></div>
-
 <script>
-const prizes = ["ZONK","50K","100K","Diamond","ZONK"];
-const canvas = document.getElementById("canvas");
+const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 
-let rot = 0;
-let lock = false;
+const items = [
+  "BONUS 5%",
+  "ZONK",
+  "BONUS 10%",
+  "COBA LAGI",
+  "BONUS 20%",
+  "ZONK"
+];
 
-const deviceId = localStorage.getItem("id") || crypto.randomUUID();
-localStorage.setItem("id",deviceId);
+const colors = ["#ff4d4d","#4da6ff","#ffd24d","#4dff88","#b84dff","#ff944d"];
+const total = items.length;
+const anglePer = 360 / total;
 
-const hasWon = JSON.parse(localStorage.getItem("hasWon")||"{}");
-const winners = JSON.parse(localStorage.getItem("winners")||"[]");
+let currentRotation = 0;
 
-/* DRAW */
-function draw(){
- const ang = 2*Math.PI/prizes.length;
- prizes.forEach((p,i)=>{
-  ctx.beginPath();
-  ctx.moveTo(150,150);
-  ctx.arc(150,150,150,i*ang,(i+1)*ang);
-  ctx.fillStyle=i%2?"#222":"#444";
-  ctx.fill();
-  ctx.save();
-  ctx.translate(150,150);
-  ctx.rotate(i*ang+ang/2);
-  ctx.fillStyle="#fff";
-  ctx.fillText(p,60,5);
-  ctx.restore();
- });
+function drawWheel(){
+  let start = 0;
+  for(let i=0;i<total;i++){
+    ctx.beginPath();
+    ctx.moveTo(150,150);
+    ctx.fillStyle = colors[i];
+    ctx.arc(150,150,150,start,start + (Math.PI*2/total));
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(150,150);
+    ctx.rotate(start + Math.PI/total);
+    ctx.fillStyle="#000";
+    ctx.font="bold 14px Arial";
+    ctx.textAlign="right";
+    ctx.fillText(items[i],130,5);
+    ctx.restore();
+
+    start += Math.PI*2/total;
+  }
 }
-draw();
 
-/* SPIN (LOGIC ASLI, AMAN) */
+drawWheel();
+
 function spin(){
- if(lock) return;
- if(hasWon[deviceId]) return alert("Kamu sudah menang!");
+  const idx = Math.floor(Math.random()*total);
+  const target = 90 - (idx * anglePer) - anglePer/2;
+  const rotate = 360*5 + target;
 
- const name=document.getElementById("name").value.trim();
- if(!name) return alert("Isi nama!");
+  currentRotation += rotate;
+  canvas.style.transform = `rotate(${currentRotation}deg)`;
 
- const anglePer = 360/prizes.length;
- const index = Math.floor(Math.random()*prizes.length);
-
- const target = 270 - (index*anglePer) - anglePer/2;
- rot += 360*6 + (target - (rot%360));
-
- lock=true;
- canvas.style.transform=`rotate(${rot}deg)`;
-
- setTimeout(()=>{
-  lock=false;
-  const prize = prizes[index];
-
-  hasWon[deviceId]=true;
-  winners.push({name,prize});
-  localStorage.setItem("hasWon",JSON.stringify(hasWon));
-  localStorage.setItem("winners",JSON.stringify(winners));
-
-  document.getElementById("result").innerText =
-   `🎉 ${name} mendapatkan: ${prize}`;
-
-  document.getElementById("claimBtn").style.display="inline-block";
-  renderLog();
- },4200);
-}
-
-function renderLog(){
- document.getElementById("log").innerHTML =
-  winners.map(w=>`• ${w.name} → ${w.prize}`).join("<br>");
-}
-renderLog();
-
-function claim(){
- const res=document.getElementById("result").innerText;
- const msg=encodeURIComponent(
-  "Halo admin, saya mau klaim hadiah:\n"+res
- );
- window.open("https://wa.me/6288293064112?text="+msg);
+  setTimeout(()=>{
+    document.getElementById("result").innerText =
+      "Hasil: " + items[idx];
+  },4000);
 }
 </script>
 
