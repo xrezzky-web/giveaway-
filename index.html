@@ -140,6 +140,10 @@ small{
 </div>
 </div>
 
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <script>
 // ================= CONFIG =================
 const ADMIN_PIN="12345";
@@ -158,6 +162,20 @@ const CODES={
  XREZ3:3,
  VIP5:5
 };
+
+// ================= FIREBASE =================
+const firebaseConfig = {
+ apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
+ authDomain: "xrezzkystore-rng.firebaseapp.com",
+ databaseURL: "https://xrezzkystore-rng-default-rtdb.asia-southeast1.firebasedatabase.app",
+ projectId: "xrezzkystore-rng",
+ storageBucket: "xrezzkystore-rng.appspot.com",
+ messagingSenderId: "304889774590",
+ appId: "1:304889774590:web:5d52c2485ca2137ad480af",
+ measurementId: "G-MQ71QRYHV7"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
 
 // ================= STORAGE =================
 const deviceId=localStorage.getItem("devId") || (()=>{
@@ -208,6 +226,15 @@ function saveData(){
  localStorage.setItem("winners",JSON.stringify(winners));
  localStorage.setItem("hasWon",hasWon?"true":"false");
  localStorage.setItem("lockedName",lockedName||"");
+
+ // SIMPAN KE FIREBASE
+ db.ref("users/"+deviceId).set({
+  name: lockedName||"",
+  spin: spinData[deviceId],
+  hasWon: hasWon
+ });
+ db.ref("winners").set(winners);
+ db.ref("usedCodes").set(usedCodes);
 }
 
 // ================= SPIN =================
@@ -299,6 +326,7 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
 document.getElementById("resetBtn").addEventListener("click",()=>{
  if(!confirm("RESET SEMUA DATA?")) return;
  localStorage.clear();
+ db.ref("/").remove();
  location.reload();
 });
 </script>
