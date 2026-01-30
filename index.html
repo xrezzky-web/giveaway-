@@ -46,7 +46,7 @@ button{
  position:relative;
  width:280px;
  height:280px;
- margin:15px auto 30px auto; /* jauhin log */
+ margin:15px auto 30px auto; /* 🔥 JAUHIN DARI LOG */
 }
 #wheel{
  width:100%;
@@ -55,23 +55,26 @@ button{
  border:8px solid #00ffd5;
  transition:transform 4.2s cubic-bezier(.25,.1,.25,1);
 }
+
+/* ⬆️ PANAH */
 #arrow{
  position:absolute;
- bottom:-28px;
+ bottom:-28px;          /* 🔥 NAIK DIKIT */
  left:50%;
  transform:translateX(-50%);
- font-size:24px;
+ font-size:24px;       /* kecil & rapi */
  color:#fff;
  text-shadow:0 0 8px #00ffd5;
  z-index:10;
 }
+
 .log{
  background:#000;
  padding:8px;
  height:120px;
  overflow:auto;
  font-size:12px;
- margin-top:18px; /* ga ketutup panah */
+ margin-top:18px;      /* 🔥 GA KETUTUP */
 }
 small{color:#aaa}
 #claimBtn{
@@ -152,27 +155,14 @@ const deviceId=localStorage.getItem("devId") || (() => {
  return id;
 })();
 
-// ================= FIREBASE =================
-const firebaseConfig = {
-  apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
-  authDomain: "xrezzkystore-rng.firebaseapp.com",
-  databaseURL: "https://xrezzkystore-rng-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "xrezzkystore-rng",
-  storageBucket: "xrezzkystore-rng.firebasestorage.app",
-  messagingSenderId: "304889774590",
-  appId: "1:304889774590:web:5d52c2485ca2137ad480af",
-  measurementId: "G-MQ71QRYHV7"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
 // ================= STORAGE =================
 let spinData=JSON.parse(localStorage.getItem("spinData")||"{}");
 let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
 let lockedName=localStorage.getItem("lockedName");
+let hasWon=localStorage.getItem("hasWon")==="true";
 let lastPrize=null;
 
-// default spin per user
+// default 1 spin
 if(spinData[deviceId]==null){
  spinData[deviceId]=1;
  localStorage.setItem("spinData",JSON.stringify(spinData));
@@ -205,19 +195,36 @@ if(lockedName){
  document.getElementById("name").disabled=true;
 }
 
+// ================= FIREBASE =================
+const firebaseConfig = {
+  apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
+  authDomain: "xrezzkystore-rng.firebaseapp.com",
+  databaseURL: "https://xrezzkystore-rng-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "xrezzkystore-rng",
+  storageBucket: "xrezzkystore-rng.firebasestorage.app",
+  messagingSenderId: "304889774590",
+  appId: "1:304889774590:web:5d52c2485ca2137ad480af",
+  measurementId: "G-MQ71QRYHV7"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 // ================= UPDATE INFO =================
 function updateInfo(){
  document.getElementById("spinInfo").innerText=
-  `🎟 Spin kamu: ${spinData[deviceId]}`;
+  `🎟 Spin kamu: ${spinData[deviceId]} | 🏆 Total pemenang: ${winners.length}/${MAX_WINNER}`;
 }
 
 // ================= FETCH WINNERS =================
 function fetchWinners(){
- db.ref('winners').on('value', snapshot => {
-  const data = snapshot.val() || {};
-  const log = Object.values(data).map(v=>`${v.name} → ${v.prize}`).join('<br>');
+ db.ref('winners').on('value', snapshot=>{
+  const data = snapshot.val()||{};
+  winners=Object.values(data);
+  const log = winners.map(v=>`${v.name} → ${v.prize}`).join('<br>');
   document.getElementById("log").innerHTML = log;
-});
+  updateInfo();
+}
+);
 }
 fetchWinners();
 updateInfo();
@@ -228,6 +235,7 @@ let rot=0,lock=false;
 function spin(){
  if(lock) return;
  if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
+ if(winners.length>=MAX_WINNER) return alert("Giveaway selesai!");
 
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
@@ -244,14 +252,22 @@ function spin(){
  if(code && CODES[code] && !usedCodes[deviceId+code]){
   spinData[deviceId]+=CODES[code];
   usedCodes[deviceId+code]=true;
+  localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
   codeEl.value="";
  }
+
  spinData[deviceId]--;
  localStorage.setItem("spinData",JSON.stringify(spinData));
  updateInfo();
 
- // RNG
- let idx=Math.floor(Math.random()*prizes.length);
+ let idx;
+ if(hasWon){
+  const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
+  idx=z[Math.floor(Math.random()*z.length)];
+ }else{
+  idx=Math.floor(Math.random()*prizes.length);
+ }
+
  const anglePer=360/prizes.length;
  const target=90-(idx*anglePer)-anglePer/2;
  rot+=360*6+(target-(rot%360));
@@ -263,18 +279,20 @@ function spin(){
   lastPrize=prizes[idx];
   document.getElementById("result").innerText=
    `🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
-
-  if(lastPrize.win){
-   const newWinner = {name: lockedName, prize:lastPrize.label};
-   db.ref('winners').push(newWinner);
+  // simpan ke firebase jika menang
+  if(lastPrize.win && !hasWon){
+   hasWon=true;
+   localStorage.setItem("hasWon","true");
+   db.ref('winners').push({name:lockedName, prize:lastPrize.label});
    document.getElementById("claimBtn").style.display="block";
   }
-},4200);
+  fetchWinners();
+ },4200);
 }
 
 // ================= CLAIM =================
 function claim(){
- if(!lastPrize||!lastPrize.win) return;
+ if(!lastPrize||!lastPrize.win)return;
  const t=encodeURIComponent(
   `Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`
  );
@@ -305,7 +323,10 @@ function exportWinners(){
 
 function resetAll(){
  if(!confirm("RESET SEMUA DATA?")) return;
- db.ref('winners').remove().then(()=>location.reload());
+ db.ref('winners').remove().then(()=>{
+  localStorage.clear();
+  location.reload();
+});
 }
 </script>
 </body>
