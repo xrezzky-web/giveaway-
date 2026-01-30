@@ -4,11 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>XREZZKYSTORE RNG GIVEAWAY</title>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
 <style>
 body{
  margin:0;
@@ -53,7 +48,7 @@ button{
  height:100%;
  border-radius:50%;
  border:8px solid #00ffd5;
- transition:transform 4.2s cubic-bezier(.25,.1,.25,1);
+ transition: transform 4s cubic-bezier(.25,.1,.25,1);
 }
 #arrow{
  position:absolute;
@@ -90,10 +85,10 @@ small{color:#aaa}
 #adminPanel button{
  background:#ff5555;
  color:#fff;
+ margin-top:5px;
 }
 </style>
 </head>
-
 <body>
 <div class="box">
 <h2 id="title">XREZZKYSTORE</h2>
@@ -101,7 +96,7 @@ small{color:#aaa}
 
 <input id="name" placeholder="Nama (1x saja)">
 <input id="code" placeholder="Kode tambahan spin (opsional)">
-<button onclick="spin()">🎰 SPIN RNG</button>
+<button id="spinBtn">🎰 SPIN RNG</button>
 
 <div id="wheelBox">
  <canvas id="wheel" width="280" height="280"></canvas>
@@ -109,15 +104,15 @@ small{color:#aaa}
 </div>
 
 <div id="result"></div>
-<button id="claimBtn" onclick="claim()">📩 KLAIM HADIAH</button>
+<button id="claimBtn">📩 KLAIM HADIAH</button>
 
 <small id="spinInfo"></small>
 <div class="log" id="log"></div>
 
 <div id="adminPanel">
  <b>🔒 ADMIN PANEL</b>
- <button onclick="exportWinners()">📤 EXPORT PEMENANG</button>
- <button onclick="resetAll()">♻ RESET SEMUA</button>
+ <button id="exportBtn">📤 EXPORT PEMENANG</button>
+ <button id="resetBtn">♻ RESET SEMUA</button>
 </div>
 </div>
 
@@ -142,7 +137,8 @@ const CODES={
  VIP5:5
 };
 
-const deviceId=localStorage.getItem("devId") || (() => {
+// ================= STORAGE =================
+const deviceId=localStorage.getItem("devId") || (()=>{
  const id="dev-"+Math.random().toString(36).slice(2);
  localStorage.setItem("devId",id);
  return id;
@@ -150,16 +146,21 @@ const deviceId=localStorage.getItem("devId") || (() => {
 
 let spinData=JSON.parse(localStorage.getItem("spinData")||"{}");
 let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
+let winners=JSON.parse(localStorage.getItem("winners")||"[]");
 let lockedName=localStorage.getItem("lockedName");
 let hasWon=localStorage.getItem("hasWon")==="true";
 let lastPrize=null;
 
-if(spinData[deviceId]==null){
- spinData[deviceId]=1;
- localStorage.setItem("spinData",JSON.stringify(spinData));
+// default spin
+if(spinData[deviceId]==null){ spinData[deviceId]=1; localStorage.setItem("spinData",JSON.stringify(spinData)); }
+
+// lock nama
+if(lockedName){
+ document.getElementById("name").value=lockedName;
+ document.getElementById("name").disabled=true;
 }
 
-// DRAW WHEEL
+// ================= DRAW WHEEL =================
 const canvas=document.getElementById("wheel");
 const ctx=canvas.getContext("2d");
 const c=140;
@@ -179,110 +180,93 @@ for(let i=0;i<prizes.length;i++){
  ctx.restore();
 }
 
-if(lockedName){
- document.getElementById("name").value=lockedName;
- document.getElementById("name").disabled=true;
-}
-
-// ================= FIREBASE =================
-const firebaseConfig = {
-  apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
-  authDomain: "xrezzkystore-rng.firebaseapp.com",
-  databaseURL: "https://xrezzkystore-rng-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "xrezzkystore-rng",
-  storageBucket: "xrezzkystore-rng.firebasestorage.app",
-  messagingSenderId: "304889774590",
-  appId: "1:304889774590:web:5d52c2485ca2137ad480af",
-  measurementId: "G-MQ71QRYHV7"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
+// ================= UTIL =================
 function updateInfo(){
  document.getElementById("spinInfo").innerText=
   `🎟 Spin kamu: ${spinData[deviceId]} | 🏆 Total pemenang: ${winners.length}/${MAX_WINNER}`;
 }
-
-function fetchWinners(){
- db.ref('winners').on('value', snapshot=>{
-  const data = snapshot.val()||{};
-  winners=Object.values(data);
-  const log = winners.map(v=>`${v.name} → ${v.prize}`).join('<br>');
-  document.getElementById("log").innerHTML = log;
-  updateInfo();
-});
-}
-fetchWinners();
 updateInfo();
 
-let rot=0,lock=false;
+function saveData(){
+ localStorage.setItem("spinData",JSON.stringify(spinData));
+ localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
+ localStorage.setItem("winners",JSON.stringify(winners));
+ localStorage.setItem("hasWon",hasWon?"true":"false");
+ localStorage.setItem("lockedName",lockedName||"");
+}
 
-function spin(){
+// ================= SPIN =================
+let rot=0,lock=false;
+const spinBtn=document.getElementById("spinBtn");
+spinBtn.addEventListener("click",()=>{
  if(lock) return;
  if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  if(winners.length>=MAX_WINNER) return alert("Giveaway selesai!");
-
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
-
  if(!lockedName){
   lockedName=name;
-  localStorage.setItem("lockedName",name);
   document.getElementById("name").disabled=true;
  }
-
+ // apply code
  const codeEl=document.getElementById("code");
  const code=codeEl.value.trim().toUpperCase();
  if(code && CODES[code] && !usedCodes[deviceId+code]){
   spinData[deviceId]+=CODES[code];
   usedCodes[deviceId+code]=true;
-  localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
   codeEl.value="";
+  saveData();
+  updateInfo();
  }
 
- spinData[deviceId]--;
- localStorage.setItem("spinData",JSON.stringify(spinData));
- updateInfo();
+spinData[deviceId]--;
+saveData();
+updateInfo();
 
- let idx;
- if(hasWon){
-  const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
-  idx=z[Math.floor(Math.random()*z.length)];
- }else{
-  idx=Math.floor(Math.random()*prizes.length);
- }
-
- const anglePer=360/prizes.length;
- const target=90-(idx*anglePer)-anglePer/2;
- rot+=360*6+(target-(rot%360));
- lock=true;
- canvas.style.transform=`rotate(${rot}deg)`;
-
- setTimeout(()=>{
-  lock=false;
-  lastPrize=prizes[idx];
-  document.getElementById("result").innerText=
-   `🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
-  if(lastPrize.win && !hasWon){
-   hasWon=true;
-   localStorage.setItem("hasWon","true");
-   db.ref('winners').push({name:lockedName, prize:lastPrize.label});
-   document.getElementById("claimBtn").style.display="block";
-  }
-  fetchWinners();
- },4200);
+// pilih prize
+let idx;
+if(hasWon){
+ const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
+ idx=z[Math.floor(Math.random()*z.length)];
+}else{
+ idx=Math.floor(Math.random()*prizes.length);
 }
 
-function claim(){
- if(!lastPrize||!lastPrize.win)return;
+const anglePer=360/prizes.length;
+const target=90-(idx*anglePer)-anglePer/2;
+rot+=360*6+(target-(rot%360));
+lock=true;
+canvas.style.transform=`rotate(${rot}deg)`;
+
+setTimeout(()=>{
+ lock=false;
+ lastPrize=prizes[idx];
+ document.getElementById("result").innerText=
+  `🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
+ document.getElementById("log").innerHTML+=
+  `<div>${lockedName} → ${lastPrize.label}</div>`;
+ if(lastPrize.win && !hasWon){
+  hasWon=true;
+  winners.push({name:lockedName,prize:lastPrize.label});
+  document.getElementById("claimBtn").style.display="block";
+ }
+ saveData();
+ updateInfo();
+},4200);
+});
+
+// ================= CLAIM =================
+document.getElementById("claimBtn").addEventListener("click",()=>{
+ if(!lastPrize||!lastPrize.win) return;
  const t=encodeURIComponent(
   `Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`
  );
  window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
-}
+});
 
+// ================= ADMIN =================
 let tap=0;
-document.getElementById("title").onclick=()=>{
+document.getElementById("title").addEventListener("click",()=>{
  tap++;
  if(tap>=5){
   const pin=prompt("PIN ADMIN:");
@@ -291,24 +275,18 @@ document.getElementById("title").onclick=()=>{
   }
   tap=0;
  }
-};
-
-function exportWinners(){
- db.ref('winners').once('value').then(snapshot=>{
-  const data = snapshot.val() || {};
-  let t="DAFTAR PEMENANG:\n\n";
-  Object.values(data).forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize}\n`);
-  alert(t);
 });
-}
-
-function resetAll(){
+document.getElementById("exportBtn").addEventListener("click",()=>{
+ if(winners.length===0) return alert("Belum ada pemenang");
+ let t="DAFTAR PEMENANG:\n\n";
+ winners.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize}\n`);
+ alert(t);
+});
+document.getElementById("resetBtn").addEventListener("click",()=>{
  if(!confirm("RESET SEMUA DATA?")) return;
- db.ref('winners').remove().then(()=>{
-  localStorage.clear();
-  location.reload();
+ localStorage.clear();
+location.reload();
 });
-}
 </script>
 </body>
 </html>
