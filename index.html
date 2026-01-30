@@ -16,6 +16,7 @@ body{
  width:300px;
  height:300px;
  margin:20px auto;
+ overflow:visible; /* 🔥 FIX UTAMA */
 }
 
 /* RODA */
@@ -26,18 +27,18 @@ body{
  transition:transform 4s cubic-bezier(0.25,0.1,0.25,1);
 }
 
-/* PANAH FIX ⬇️ */
+/* PANAH ⬇️ */
 #arrow{
  position:absolute;
- top:-22px;
+ top:-5px;              /* 🔥 JANGAN TERLALU KE ATAS */
  left:50%;
  transform:translateX(-50%);
  width:0;
  height:0;
  border-left:16px solid transparent;
  border-right:16px solid transparent;
- border-bottom:28px solid red;
- z-index:999;
+ border-bottom:28px solid #ff3b3b;
+ z-index:9999;          /* 🔥 DI ATAS SEMUANYA */
 }
 
 input,button{
@@ -115,7 +116,7 @@ function draw(){
 }
 draw();
 
-/* SPIN (TIDAK DIUBAH LOGIC-NYA) */
+/* SPIN (TIDAK DIUBAH) */
 function spin(){
  if(lock) return;
  if(hasWon[deviceId]) return alert("Kamu sudah menang!");
@@ -155,7 +156,6 @@ function renderLog(){
 }
 renderLog();
 
-/* KLAIM WA */
 function claim(){
  const res=document.getElementById("result").innerText;
  const msg=encodeURIComponent(
