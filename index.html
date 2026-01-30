@@ -2,43 +2,44 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<title>XREZZKYSTORE RNG GIVEAWAY</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XREZZKYSTORE RNG</title>
 
 <style>
 body{
   margin:0;
-  min-height:100vh;
+  font-family:Arial, Helvetica, sans-serif;
+  background:#0f172a;
+  color:#fff;
   display:flex;
-  align-items:center;
   justify-content:center;
-  background:#0f0f0f;
-  font-family:Arial, sans-serif;
-  color:white;
+  align-items:center;
+  min-height:100vh;
 }
 
 .container{
-  position:relative;
-  width:320px;
   text-align:center;
 }
 
-#wheelBox{
+h1{
+  margin-bottom:10px;
+}
+
+#wheel-wrapper{
   position:relative;
   width:300px;
   height:300px;
-  margin:auto;
+  margin:20px auto;
 }
 
 #wheel{
   width:100%;
   height:100%;
   border-radius:50%;
-  border:6px solid #fff;
-  transition:transform 4s cubic-bezier(0.17, 0.67, 0.22, 0.99);
+  border:8px solid #fff;
+  transition:transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
 }
 
-/* PANAH FIX */
 #arrow{
   position:absolute;
   bottom:-12px;
@@ -49,19 +50,22 @@ body{
   border-left:14px solid transparent;
   border-right:14px solid transparent;
   border-top:24px solid #ffffff;
-  z-index:20;
+  z-index:10;
 }
 
 button{
-  margin-top:20px;
-  padding:12px 25px;
+  padding:12px 20px;
   font-size:16px;
-  font-weight:bold;
   border:none;
   border-radius:8px;
-  cursor:pointer;
-  background:#25d366;
+  background:#22c55e;
   color:#000;
+  cursor:pointer;
+}
+
+button:disabled{
+  background:#555;
+  cursor:not-allowed;
 }
 
 #result{
@@ -69,79 +73,116 @@ button{
   font-size:18px;
   font-weight:bold;
 }
+
+#claim{
+  display:none;
+  margin-top:10px;
+  text-decoration:none;
+  background:#25D366;
+  color:#000;
+  padding:10px 16px;
+  border-radius:8px;
+  font-weight:bold;
+}
 </style>
 </head>
 
 <body>
 <div class="container">
+  <h1>XREZZKYSTORE GIVEAWAY</h1>
 
-  <div id="wheelBox">
+  <div id="wheel-wrapper">
     <canvas id="wheel" width="300" height="300"></canvas>
     <div id="arrow"></div>
   </div>
 
-  <button onclick="spin()">SPIN</button>
-  <div id="result">Hasil: -</div>
+  <button id="spinBtn">SPIN SEKARANG</button>
 
+  <div id="result"></div>
+  <a id="claim" target="_blank">KLAIM HADIAH</a>
 </div>
 
 <script>
-const canvas = document.getElementById("wheel");
-const ctx = canvas.getContext("2d");
-
-const items = [
-  "BONUS 5%",
+const prizes = [
   "ZONK",
-  "BONUS 10%",
-  "COBA LAGI",
-  "BONUS 20%",
+  "5K",
+  "10K",
+  "ZONK",
+  "20K",
+  "ZONK",
+  "50K",
   "ZONK"
 ];
 
-const colors = ["#ff4d4d","#4da6ff","#ffd24d","#4dff88","#b84dff","#ff944d"];
-const total = items.length;
-const anglePer = 360 / total;
+const wheel = document.getElementById("wheel");
+const ctx = wheel.getContext("2d");
+const spinBtn = document.getElementById("spinBtn");
+const resultEl = document.getElementById("result");
+const claimBtn = document.getElementById("claim");
+
+const size = wheel.width;
+const center = size / 2;
+const anglePer = 360 / prizes.length;
 
 let currentRotation = 0;
+let spinning = false;
 
 function drawWheel(){
-  let start = 0;
-  for(let i=0;i<total;i++){
+  for(let i=0;i<prizes.length;i++){
+    const start = (i * anglePer) * Math.PI/180;
+    const end = ((i+1) * anglePer) * Math.PI/180;
+
     ctx.beginPath();
-    ctx.moveTo(150,150);
-    ctx.fillStyle = colors[i];
-    ctx.arc(150,150,150,start,start + (Math.PI*2/total));
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, center, start, end);
+    ctx.fillStyle = i % 2 === 0 ? "#1e40af" : "#1d4ed8";
     ctx.fill();
+    ctx.stroke();
 
     ctx.save();
-    ctx.translate(150,150);
-    ctx.rotate(start + Math.PI/total);
-    ctx.fillStyle="#000";
-    ctx.font="bold 14px Arial";
+    ctx.translate(center, center);
+    ctx.rotate(start + (end-start)/2);
     ctx.textAlign="right";
-    ctx.fillText(items[i],130,5);
+    ctx.fillStyle="#fff";
+    ctx.font="bold 14px Arial";
+    ctx.fillText(prizes[i], center - 10, 5);
     ctx.restore();
-
-    start += Math.PI*2/total;
   }
 }
 
 drawWheel();
 
-function spin(){
-  const idx = Math.floor(Math.random()*total);
-  const target = 90 - (idx * anglePer) - anglePer/2;
-  const rotate = 360*5 + target;
+if(localStorage.getItem("xrezzky_spun")){
+  spinBtn.disabled = true;
+  resultEl.textContent = "Kamu sudah spin sebelumnya.";
+}
 
-  currentRotation += rotate;
-  canvas.style.transform = `rotate(${currentRotation}deg)`;
+spinBtn.onclick = ()=>{
+  if(spinning) return;
+  spinning = true;
+  spinBtn.disabled = true;
+
+  const idx = Math.floor(Math.random() * prizes.length);
+  const targetAngle = 90 - (idx * anglePer) - anglePer/2;
+  const spins = 5 * 360;
+  currentRotation += spins + targetAngle;
+
+  wheel.style.transform = `rotate(${currentRotation}deg)`;
 
   setTimeout(()=>{
-    document.getElementById("result").innerText =
-      "Hasil: " + items[idx];
-  },4000);
-}
-</script>
+    const prize = prizes[idx];
+    localStorage.setItem("xrezzky_spun","yes");
 
+    resultEl.textContent = "HASIL: " + prize;
+
+    if(prize !== "ZONK"){
+      claimBtn.style.display="inline-block";
+      claimBtn.href = "https://wa.me/6288293064112?text=Halo%20saya%20menang%20"+encodeURIComponent(prize);
+    }
+
+    spinning = false;
+  }, 4200);
+};
+</script>
 </body>
 </html>
