@@ -20,7 +20,12 @@ body{
  padding:15px;
  box-shadow:0 0 25px #00ffd5;
 }
-h2{text-align:center;color:#00ffd5;margin:5px}
+h2{
+ text-align:center;
+ color:#00ffd5;
+ margin:5px;
+ cursor:pointer;
+}
 input,button{
  width:100%;
  margin-top:8px;
@@ -71,13 +76,25 @@ small{color:#aaa}
  color:#000;
  display:none;
 }
+#adminPanel{
+ display:none;
+ background:#020b0b;
+ padding:10px;
+ border-radius:10px;
+ margin-top:10px;
+ border:1px solid #00ffd5;
+}
+#adminPanel button{
+ background:#ff5555;
+ color:#fff;
+}
 </style>
 </head>
 
 <body>
 
 <div class="box">
-<h2>XREZZKYSTORE</h2>
+<h2 id="title">XREZZKYSTORE</h2>
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
 <input id="name" placeholder="Nama (1x saja)">
@@ -94,14 +111,23 @@ small{color:#aaa}
 
 <small id="counter"></small>
 <div class="log" id="log"></div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel">
+ <b>🔒 ADMIN PANEL</b>
+ <button onclick="exportWinners()">📤 EXPORT PEMENANG</button>
+ <button onclick="resetAll()">♻ RESET GIVEAWAY</button>
+</div>
 </div>
 
 <script>
-// ================= CONFIG =================
-const MAX_WINNER = 10;
+// ================= ADMIN CONFIG =================
+const ADMIN_PIN = "12345"; // 🔴 GANTI PIN DI SINI
 const ADMIN_WA = "088293064112";
+const MAX_WINNER = 10;
 
-const prizes = [
+// ================= DATA =================
+const prizes=[
  {label:"Saldo DANA 5K", win:true},
  {label:"Diamond FF", win:true},
  {label:"ZONK", win:false},
@@ -109,162 +135,152 @@ const prizes = [
  {label:"Voucher FF", win:true},
  {label:"ZONK", win:false}
 ];
-
-const codes = {
- "XREZ1": 1,
- "XREZ7": 7,
-};
+const codes={XREZ1:1,XREZ3:3};
 
 // ================= DEVICE =================
-const deviceId = localStorage.getItem("devId") || (() => {
- const id = "dev-" + Math.random().toString(36).slice(2);
- localStorage.setItem("devId", id);
+const deviceId=localStorage.getItem("devId")||(()=>{
+ const id="dev-"+Math.random().toString(36).slice(2);
+ localStorage.setItem("devId",id);
  return id;
 })();
 
 // ================= STORAGE =================
-let spins = JSON.parse(localStorage.getItem("spins") || "{}");
-let usedCodes = JSON.parse(localStorage.getItem("usedCodes") || "{}");
-let lockedName = localStorage.getItem("lockedName");
-let winners = JSON.parse(localStorage.getItem("winners") || "[]");
-let hasWon = localStorage.getItem("hasWon") === "true";
+let spins=JSON.parse(localStorage.getItem("spins")||"{}");
+let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
+let lockedName=localStorage.getItem("lockedName");
+let winners=JSON.parse(localStorage.getItem("winners")||"[]");
+let hasWon=localStorage.getItem("hasWon")==="true";
 
-// default 1 spin gratis
-if(spins[deviceId] == null){
- spins[deviceId] = 1;
- save();
-}
+// default 1 spin
+if(spins[deviceId]==null){spins[deviceId]=1;save();}
 
-// kunci nama
+// lock name
 if(lockedName){
- document.getElementById("name").value = lockedName;
- document.getElementById("name").disabled = true;
+ document.getElementById("name").value=lockedName;
+ document.getElementById("name").disabled=true;
 }
 
-// ================= DRAW WHEEL =================
-const canvas = document.getElementById("wheel");
-const ctx = canvas.getContext("2d");
-const center = 140;
-const slice = 2*Math.PI/prizes.length;
+// ================= DRAW =================
+const canvas=document.getElementById("wheel");
+const ctx=canvas.getContext("2d");
+const c=140,slice=2*Math.PI/prizes.length;
 
-function drawWheel(){
- for(let i=0;i<prizes.length;i++){
-  ctx.beginPath();
-  ctx.moveTo(center,center);
-  ctx.fillStyle = `hsl(${i*360/prizes.length},80%,55%)`;
-  ctx.arc(center,center,140,i*slice,(i+1)*slice);
-  ctx.fill();
-
-  ctx.save();
-  ctx.translate(center,center);
-  ctx.rotate(i*slice + slice/2);
-  ctx.fillStyle="#000";
-  ctx.font="bold 12px Arial";
-  ctx.fillText(prizes[i].label,50,5);
-  ctx.restore();
- }
+for(let i=0;i<prizes.length;i++){
+ ctx.beginPath();
+ ctx.moveTo(c,c);
+ ctx.fillStyle=`hsl(${i*360/prizes.length},80%,55%)`;
+ ctx.arc(c,c,140,i*slice,(i+1)*slice);
+ ctx.fill();
+ ctx.save();
+ ctx.translate(c,c);
+ ctx.rotate(i*slice+slice/2);
+ ctx.fillStyle="#000";
+ ctx.font="bold 12px Arial";
+ ctx.fillText(prizes[i].label,50,5);
+ ctx.restore();
 }
-drawWheel();
 
 // ================= SPIN =================
-let rot = 0;
-let lock = false;
-let lastPrize = null;
+let rot=0,lock=false,lastPrize=null;
 
 function spin(){
  if(lock) return;
+ if(winners.length>=MAX_WINNER) return alert("Giveaway selesai!");
 
- if(winners.length >= MAX_WINNER){
-  alert("Giveaway sudah selesai!");
-  return;
- }
-
- const nameInput = document.getElementById("name");
- const name = nameInput.value.trim();
+ const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
 
  if(!lockedName){
-  lockedName = name;
-  localStorage.setItem("lockedName", name);
-  nameInput.disabled = true;
+  lockedName=name;
+  localStorage.setItem("lockedName",name);
+  document.getElementById("name").disabled=true;
  }
 
- // tambah spin dari code
- const c = document.getElementById("code").value.trim();
- if(c && codes[c] && !usedCodes[c]){
-  spins[deviceId] += codes[c];
-  usedCodes[c] = true;
+ const cd=document.getElementById("code").value.trim();
+ if(cd&&codes[cd]&&!usedCodes[cd]){
+  spins[deviceId]+=codes[cd];
+  usedCodes[cd]=true;
  }
 
- if(spins[deviceId] <= 0){
-  alert("Spin habis!");
-  return;
- }
+ if(spins[deviceId]<=0) return alert("Spin habis!");
+ spins[deviceId]--; save();
 
- spins[deviceId]--;
- save();
+ const anglePer=360/prizes.length;
+ let idx;
 
- const anglePer = 360 / prizes.length;
-
- // 🔒 jika sudah pernah MENANG → dipaksa ZONK
- let finalIndex;
  if(hasWon){
-  const zonkIndexes = prizes
-    .map((p,i)=>!p.win ? i : null)
-    .filter(i=>i!==null);
-  finalIndex = zonkIndexes[Math.floor(Math.random()*zonkIndexes.length)];
+  const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
+  idx=z[Math.floor(Math.random()*z.length)];
  }else{
-  finalIndex = Math.floor(Math.random() * prizes.length);
+  idx=Math.floor(Math.random()*prizes.length);
  }
 
- const targetAngle = 270 - (finalIndex * anglePer) - anglePer/2;
- const spinAngle = 360*6 + (targetAngle - (rot % 360));
-
- rot += spinAngle;
- lock = true;
- canvas.style.transform = `rotate(${rot}deg)`;
+ const target=270-(idx*anglePer)-anglePer/2;
+ const spinAngle=360*6+(target-(rot%360));
+ rot+=spinAngle; lock=true;
+ canvas.style.transform=`rotate(${rot}deg)`;
 
  setTimeout(()=>{
-  lock = false;
-  const prize = prizes[finalIndex];
-  lastPrize = prize;
+  lock=false;
+  lastPrize=prizes[idx];
+  document.getElementById("result").innerText=
+   `🎉 ${name} mendapatkan: ${lastPrize.label}`;
+  document.getElementById("log").innerHTML+=
+   `<div>${name} → ${lastPrize.label}</div>`;
 
-  document.getElementById("result").innerText =
-   `🎉 ${name} mendapatkan: ${prize.label}`;
-
-  document.getElementById("log").innerHTML +=
-   `<div>${name} → ${prize.label}</div>`;
-
-  if(prize.win && !hasWon){
-   hasWon = true;
+  if(lastPrize.win&&!hasWon){
+   hasWon=true;
    localStorage.setItem("hasWon","true");
-   winners.push({name, prize:prize.label});
-   localStorage.setItem("winners", JSON.stringify(winners));
+   winners.push({name,prize:lastPrize.label});
+   localStorage.setItem("winners",JSON.stringify(winners));
    document.getElementById("claimBtn").style.display="block";
   }
-
   updateCounter();
  },4200);
 }
 
-// ================= KLAIM =================
+// ================= CLAIM =================
 function claim(){
- if(!lastPrize || !lastPrize.win) return;
- const name = lockedName;
- const text = encodeURIComponent(
-  `Halo admin XREZZKYSTORE 👋\n\nSaya *${name}* mendapatkan hadiah:\n🎁 *${lastPrize.label}*\n\nMohon info klaim ya 🙏`
+ if(!lastPrize||!lastPrize.win) return;
+ const text=encodeURIComponent(
+  `Halo admin XREZZKYSTORE 👋\n\nSaya *${lockedName}* mendapatkan hadiah:\n🎁 *${lastPrize.label}*\n\nMohon info klaim 🙏`
  );
- window.open(`https://wa.me/6288293064112${ADMIN_WA}?text=${text}`,"_blank");
+ window.open(`https://wa.me/${ADMIN_WA}?text=${text}`,"_blank");
 }
 
+// ================= ADMIN =================
+let tap=0;
+document.getElementById("title").onclick=()=>{
+ tap++;
+ if(tap>=5){
+  const pin=prompt("Masukkan PIN admin:");
+  if(pin===ADMIN_PIN){
+   document.getElementById("adminPanel").style.display="block";
+  }
+  tap=0;
+ }
+};
+
+function exportWinners(){
+ let text="DAFTAR PEMENANG:\n\n";
+ winners.forEach((w,i)=>text+=`${i+1}. ${w.name} - ${w.prize}\n`);
+ alert(text);
+}
+
+function resetAll(){
+ if(!confirm("RESET SEMUA DATA?")) return;
+ localStorage.clear();
+ location.reload();
+}
+
+// ================= UTIL =================
 function updateCounter(){
- document.getElementById("counter").innerText =
+ document.getElementById("counter").innerText=
   `🏆 Pemenang: ${winners.length}/${MAX_WINNER}`;
 }
-
 function save(){
- localStorage.setItem("spins", JSON.stringify(spins));
- localStorage.setItem("usedCodes", JSON.stringify(usedCodes));
+ localStorage.setItem("spins",JSON.stringify(spins));
+ localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
 }
 updateCounter();
 </script>
