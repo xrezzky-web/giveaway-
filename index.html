@@ -2,187 +2,258 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>XREZZKYSTORE RNG GIVEAWAY</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XREZZKYSTORE RNG GIVEAWAY</title>
 
 <style>
 body{
-  margin:0;
-  font-family:Arial, Helvetica, sans-serif;
-  background:#0f172a;
-  color:#fff;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  min-height:100vh;
+ margin:0;
+ background:radial-gradient(circle,#1f6f6f,#020b0b);
+ font-family:Arial,Helvetica,sans-serif;
+ color:#fff;
 }
-
-.container{
-  text-align:center;
+.box{
+ width:360px;
+ margin:30px auto;
+ background:#071414;
+ border-radius:18px;
+ padding:15px;
+ box-shadow:0 0 25px #00ffd5;
 }
-
-h1{
-  margin-bottom:10px;
+h2{
+ text-align:center;
+ color:#00ffd5;
+ margin:5px;
+ cursor:pointer;
 }
-
-#wheel-wrapper{
-  position:relative;
-  width:300px;
-  height:300px;
-  margin:20px auto;
+input,button{
+ width:100%;
+ margin-top:8px;
+ padding:10px;
+ border-radius:8px;
+ border:none;
 }
-
-#wheel{
-  width:100%;
-  height:100%;
-  border-radius:50%;
-  border:8px solid #fff;
-  transition:transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
-}
-
-#arrow{
-  position:absolute;
-  bottom:-12px;
-  left:50%;
-  transform:translateX(-50%);
-  width:0;
-  height:0;
-  border-left:14px solid transparent;
-  border-right:14px solid transparent;
-  border-top:24px solid #ffffff;
-  z-index:10;
-}
-
 button{
-  padding:12px 20px;
-  font-size:16px;
-  border:none;
-  border-radius:8px;
-  background:#22c55e;
-  color:#000;
-  cursor:pointer;
+ background:#00ffd5;
+ font-weight:bold;
+ cursor:pointer;
 }
-
-button:disabled{
-  background:#555;
-  cursor:not-allowed;
+#wheelBox{
+ position:relative;
+ width:280px;
+ height:280px;
+ margin:15px auto;
 }
-
-#result{
-  margin-top:15px;
-  font-size:18px;
-  font-weight:bold;
+#wheel{
+ width:100%;
+ height:100%;
+ border-radius:50%;
+ border:8px solid #00ffd5;
+ transition:transform 4.2s cubic-bezier(.25,.1,.25,1);
 }
-
-#claim{
-  display:none;
-  margin-top:10px;
-  text-decoration:none;
-  background:#25D366;
-  color:#000;
-  padding:10px 16px;
-  border-radius:8px;
-  font-weight:bold;
+#arrow{
+ position:absolute;
+ bottom:-26px;
+ left:50%;
+ transform:translateX(-50%);
+ width:0;height:0;
+ border-left:16px solid transparent;
+ border-right:16px solid transparent;
+ border-top:30px solid #ffffff;
+ z-index:10;
+}
+.log{
+ background:#000;
+ padding:8px;
+ height:120px;
+ overflow:auto;
+ font-size:12px;
+ margin-top:8px;
+}
+small{color:#aaa}
+#claimBtn{
+ background:#25D366;
+ color:#000;
+ display:none;
+}
+#adminPanel{
+ display:none;
+ background:#020b0b;
+ padding:10px;
+ border-radius:10px;
+ margin-top:10px;
+ border:1px solid #00ffd5;
+}
+#adminPanel button{
+ background:#ff5555;
+ color:#fff;
 }
 </style>
 </head>
 
 <body>
-<div class="container">
-  <h1>XREZZKYSTORE GIVEAWAY</h1>
+<div class="box">
+<h2 id="title">XREZZKYSTORE</h2>
+<p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
-  <div id="wheel-wrapper">
-    <canvas id="wheel" width="300" height="300"></canvas>
-    <div id="arrow"></div>
-  </div>
+<input id="name" placeholder="Nama (1x saja)">
+<button onclick="spin()">🎰 SPIN RNG</button>
 
-  <button id="spinBtn">SPIN SEKARANG</button>
+<div id="wheelBox">
+ <canvas id="wheel" width="280" height="280"></canvas>
+ <div id="arrow"></div>
+</div>
 
-  <div id="result"></div>
-  <a id="claim" target="_blank">KLAIM HADIAH</a>
+<div id="result"></div>
+<button id="claimBtn" onclick="claim()">📩 KLAIM HADIAH</button>
+
+<small id="spinInfo"></small>
+<div class="log" id="log"></div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel">
+ <b>🔒 ADMIN PANEL</b>
+ <button onclick="exportWinners()">📤 EXPORT PEMENANG</button>
+ <button onclick="resetAll()">♻ RESET SEMUA</button>
+</div>
 </div>
 
 <script>
-const prizes = [
-  "ZONK",
-  "5K",
-  "10K",
-  "ZONK",
-  "20K",
-  "ZONK",
-  "50K",
-  "ZONK"
+const ADMIN_PIN="12345";
+const ADMIN_WA="6288293064112";
+const MAX_WINNER=10;
+
+const prizes=[
+ {label:"ZONK",win:false},
+ {label:"DANA 5K",win:true},
+ {label:"ZONK",win:false},
+ {label:"DANA 10K",win:true},
+ {label:"ZONK",win:false},
+ {label:"VOUCHER",win:true}
 ];
 
-const wheel = document.getElementById("wheel");
-const ctx = wheel.getContext("2d");
-const spinBtn = document.getElementById("spinBtn");
-const resultEl = document.getElementById("result");
-const claimBtn = document.getElementById("claim");
+let spins=JSON.parse(localStorage.getItem("spins")||"1");
+let winners=JSON.parse(localStorage.getItem("winners")||"[]");
+let lockedName=localStorage.getItem("lockedName");
+let hasWon=localStorage.getItem("hasWon")==="true";
 
-const size = wheel.width;
-const center = size / 2;
-const anglePer = 360 / prizes.length;
+const canvas=document.getElementById("wheel");
+const ctx=canvas.getContext("2d");
+const c=140;
+const slice=2*Math.PI/prizes.length;
 
-let currentRotation = 0;
-let spinning = false;
+function draw(){
+ for(let i=0;i<prizes.length;i++){
+  ctx.beginPath();
+  ctx.moveTo(c,c);
+  ctx.fillStyle=`hsl(${i*360/prizes.length},80%,55%)`;
+  ctx.arc(c,c,140,i*slice,(i+1)*slice);
+  ctx.fill();
+  ctx.save();
+  ctx.translate(c,c);
+  ctx.rotate(i*slice+slice/2);
+  ctx.fillStyle="#000";
+  ctx.font="bold 12px Arial";
+  ctx.fillText(prizes[i].label,50,5);
+  ctx.restore();
+ }
+}
+draw();
 
-function drawWheel(){
-  for(let i=0;i<prizes.length;i++){
-    const start = (i * anglePer) * Math.PI/180;
-    const end = ((i+1) * anglePer) * Math.PI/180;
+if(lockedName){
+ document.getElementById("name").value=lockedName;
+ document.getElementById("name").disabled=true;
+}
 
-    ctx.beginPath();
-    ctx.moveTo(center, center);
-    ctx.arc(center, center, center, start, end);
-    ctx.fillStyle = i % 2 === 0 ? "#1e40af" : "#1d4ed8";
-    ctx.fill();
-    ctx.stroke();
+function updateInfo(){
+ document.getElementById("spinInfo").innerText=
+  `🎟 Sisa Spin: ${spins} | 🏆 Pemenang: ${winners.length}/${MAX_WINNER}`;
+}
+updateInfo();
 
-    ctx.save();
-    ctx.translate(center, center);
-    ctx.rotate(start + (end-start)/2);
-    ctx.textAlign="right";
-    ctx.fillStyle="#fff";
-    ctx.font="bold 14px Arial";
-    ctx.fillText(prizes[i], center - 10, 5);
-    ctx.restore();
+let rot=0,lock=false,lastPrize=null;
+
+function spin(){
+ if(lock) return;
+ if(spins<=0) return alert("Spin habis!");
+ if(winners.length>=MAX_WINNER) return alert("Giveaway selesai!");
+
+ const name=document.getElementById("name").value.trim();
+ if(!name) return alert("Isi nama!");
+
+ if(!lockedName){
+  lockedName=name;
+  localStorage.setItem("lockedName",name);
+  document.getElementById("name").disabled=true;
+ }
+
+ spins--; localStorage.setItem("spins",spins);
+ updateInfo();
+
+ let idx;
+ if(hasWon){
+  const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
+  idx=z[Math.floor(Math.random()*z.length)];
+ }else{
+  idx=Math.floor(Math.random()*prizes.length);
+ }
+
+ const anglePer=360/prizes.length;
+ const target=90-(idx*anglePer)-anglePer/2;
+ rot+=360*6+(target-(rot%360));
+ lock=true;
+ canvas.style.transform=`rotate(${rot}deg)`;
+
+ setTimeout(()=>{
+  lock=false;
+  lastPrize=prizes[idx];
+  document.getElementById("result").innerText=
+   `🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
+  document.getElementById("log").innerHTML+=
+   `<div>${lockedName} → ${lastPrize.label}</div>`;
+
+  if(lastPrize.win&&!hasWon){
+   hasWon=true;
+   localStorage.setItem("hasWon","true");
+   winners.push({name:lockedName,prize:lastPrize.label});
+   localStorage.setItem("winners",JSON.stringify(winners));
+   document.getElementById("claimBtn").style.display="block";
   }
+  updateInfo();
+ },4200);
 }
 
-drawWheel();
-
-if(localStorage.getItem("xrezzky_spun")){
-  spinBtn.disabled = true;
-  resultEl.textContent = "Kamu sudah spin sebelumnya.";
+function claim(){
+ const text=encodeURIComponent(
+  `Halo admin, saya ${lockedName} menang ${lastPrize.label}`
+ );
+ window.open(`https://wa.me/${ADMIN_WA}?text=${text}`,"_blank");
 }
 
-spinBtn.onclick = ()=>{
-  if(spinning) return;
-  spinning = true;
-  spinBtn.disabled = true;
-
-  const idx = Math.floor(Math.random() * prizes.length);
-  const targetAngle = 90 - (idx * anglePer) - anglePer/2;
-  const spins = 5 * 360;
-  currentRotation += spins + targetAngle;
-
-  wheel.style.transform = `rotate(${currentRotation}deg)`;
-
-  setTimeout(()=>{
-    const prize = prizes[idx];
-    localStorage.setItem("xrezzky_spun","yes");
-
-    resultEl.textContent = "HASIL: " + prize;
-
-    if(prize !== "ZONK"){
-      claimBtn.style.display="inline-block";
-      claimBtn.href = "https://wa.me/6288293064112?text=Halo%20saya%20menang%20"+encodeURIComponent(prize);
-    }
-
-    spinning = false;
-  }, 4200);
+// ADMIN
+let tap=0;
+document.getElementById("title").onclick=()=>{
+ tap++;
+ if(tap>=5){
+  const pin=prompt("PIN ADMIN:");
+  if(pin===ADMIN_PIN){
+   document.getElementById("adminPanel").style.display="block";
+  }
+  tap=0;
+ }
 };
+
+function exportWinners(){
+ let t="PEMENANG:\n\n";
+ winners.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize}\n`);
+ alert(t);
+}
+
+function resetAll(){
+ if(!confirm("RESET SEMUA DATA?"))return;
+ localStorage.clear();
+ location.reload();
+}
 </script>
 </body>
 </html>
