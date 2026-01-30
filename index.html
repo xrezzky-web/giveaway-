@@ -5,39 +5,147 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>XREZZKYSTORE RNG GIVEAWAY</title>
 <style>
-body{margin:0;background:radial-gradient(circle,#1f6f6f,#020b0b);font-family:Arial,Helvetica,sans-serif;color:#fff;display:flex;justify-content:center;}
-.box{width:360px;margin:30px auto;background:#071414;border-radius:18px;padding:20px;box-shadow:0 0 25px #00ffd5;display:flex;flex-direction:column;align-items:center;}
-h2{text-align:center;color:#00ffd5;margin:5px 0;cursor:pointer;}
-input,button{width:100%;margin-top:10px;padding:10px;border-radius:8px;border:none;box-sizing:border-box;font-size:14px;}
-button{background:#00ffd5;font-weight:bold;cursor:pointer;}
-#wheelBox{position:relative;width:280px;height:280px;margin:20px auto;}
-#wheel{width:100%;height:100%;border-radius:50%;border:8px solid #00ffd5;transition: transform 4s cubic-bezier(.25,.1,.25,1);}
-#arrow{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);font-size:24px;color:#fff;text-shadow:0 0 8px #00ffd5;z-index:10;}
-#result{margin-top:15px;font-size:16px;font-weight:bold;text-align:center;}
-.log{background:#000;padding:10px;height:120px;overflow:auto;font-size:12px;margin-top:20px;width:100%;border-radius:8px;}
-#globalWinners{background:#020b0b;padding:10px;height:100px;overflow:auto;font-size:12px;margin-top:10px;width:100%;border-radius:8px;border:1px solid #00ffd5;}
-small{color:#aaa;margin-top:8px;display:block;text-align:center;}
-#claimBtn{background:#25D366;color:#000;margin-top:10px;display:none;width:100%;}
-#adminPanel{display:none;background:#020b0b;padding:10px;border-radius:10px;margin-top:15px;border:1px solid #00ffd5;width:100%;}
-#adminPanel button{background:#ff5555;color:#fff;margin-top:5px;width:100%;}
+body{
+ margin:0;
+ background:radial-gradient(circle,#1f6f6f,#020b0b);
+ font-family:Arial,Helvetica,sans-serif;
+ color:#fff;
+ display:flex;
+ justify-content:center;
+}
+.box{
+ width:360px;
+ margin:30px auto;
+ background:#071414;
+ border-radius:18px;
+ padding:20px;
+ box-shadow:0 0 25px #00ffd5;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+}
+h2{
+ text-align:center;
+ color:#00ffd5;
+ margin:5px 0;
+ cursor:pointer;
+}
+input,button{
+ width:100%;
+ margin-top:10px;
+ padding:10px;
+ border-radius:8px;
+ border:none;
+ box-sizing:border-box;
+ font-size:14px;
+}
+button{
+ background:#00ffd5;
+ font-weight:bold;
+ cursor:pointer;
+}
+#wheelBox{
+ position:relative;
+ width:280px;
+ height:280px;
+ margin:20px auto;
+}
+#wheel{
+ width:100%;
+ height:100%;
+ border-radius:50%;
+ border:8px solid #00ffd5;
+ transition: transform 4s cubic-bezier(.25,.1,.25,1);
+}
+#arrow{
+ position:absolute;
+ bottom:-28px;
+ left:50%;
+ transform:translateX(-50%);
+ font-size:24px;
+ color:#fff;
+ text-shadow:0 0 8px #00ffd5;
+ z-index:10;
+}
+#result{
+ margin-top:15px;
+ font-size:16px;
+ font-weight:bold;
+ text-align:center;
+}
+.log{
+ background:#000;
+ padding:10px;
+ height:120px;
+ overflow:auto;
+ font-size:12px;
+ margin-top:20px;
+ width:100%;
+ border-radius:8px;
+}
+#globalWinners{
+ background:#020b0b;
+ padding:10px;
+ height:100px;
+ overflow:auto;
+ font-size:12px;
+ margin-top:10px;
+ width:100%;
+ border-radius:8px;
+ border:1px solid #00ffd5;
+}
+small{
+ color:#aaa;
+ margin-top:8px;
+ display:block;
+ text-align:center;
+}
+#claimBtn{
+ background:#25D366;
+ color:#000;
+ margin-top:10px;
+ display:none;
+ width:100%;
+}
+#adminPanel{
+ display:none;
+ background:#020b0b;
+ padding:10px;
+ border-radius:10px;
+ margin-top:15px;
+ border:1px solid #00ffd5;
+ width:100%;
+}
+#adminPanel button{
+ background:#ff5555;
+ color:#fff;
+ margin-top:5px;
+ width:100%;
+}
 </style>
 </head>
 <body>
 <div class="box">
 <h2 id="title">XREZZKYSTORE</h2>
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
+
 <input id="name" placeholder="Nama (1x saja)">
 <input id="code" placeholder="Kode tambahan spin (opsional)">
 <button id="spinBtn">🎰 SPIN RNG</button>
+
 <div id="wheelBox">
  <canvas id="wheel" width="280" height="280"></canvas>
  <div id="arrow">⬆️</div>
 </div>
+
 <div id="result"></div>
 <button id="claimBtn">📩 KLAIM HADIAH</button>
+
 <small id="spinInfo"></small>
 <div class="log" id="log"></div>
+
 <div id="globalWinners"></div>
+
 <div id="adminPanel">
  <b>🔒 ADMIN PANEL</b>
  <button id="exportBtn">📤 EXPORT PEMENANG</button>
@@ -45,9 +153,12 @@ small{color:#aaa;margin-top:8px;display:block;text-align:center;}
 </div>
 </div>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <script>
+// ================= CONFIG =================
 const ADMIN_PIN="12345";
 const ADMIN_WA="6288293064112";
 const MAX_WINNER=10;
@@ -60,9 +171,9 @@ const prizes=[
  {label:"TRAIN(1)+CLASS(1)",win:true}
 ];
 const CODES={ XREZ1:1, XREZ3:3, VIP5:5,MEMBER:50};
-const WIN_CHANCE = 0.05; // 5% chance menang
+const WIN_CHANCE = 0.5; // 5% chance menang, bisa diubah sesuai susah/mudah
 
-// Firebase
+// ================= Firebase =================
 const firebaseConfig = {
  apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
  authDomain: "xrezzkystore-rng.firebaseapp.com",
@@ -76,7 +187,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Storage
+// ================= STORAGE =================
 const deviceId=localStorage.getItem("devId") || (()=>{ 
  const id="dev-"+Math.random().toString(36).slice(2);
  localStorage.setItem("devId",id);
@@ -90,7 +201,7 @@ let lastPrize=null;
 if(spinData[deviceId]==null){ spinData[deviceId]=1; saveData(); }
 if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
-// Draw wheel
+// ================= DRAW WHEEL =================
 const canvas=document.getElementById("wheel");
 const ctx=canvas.getContext("2d");
 const c=140;
@@ -110,7 +221,7 @@ for(let i=0;i<prizes.length;i++){
  ctx.restore();
 }
 
-// Util
+// ================= UTIL =================
 function updateInfo(){
  document.getElementById("spinInfo").innerText=`🎟 Spin kamu: ${spinData[deviceId]}`;
 }
@@ -121,20 +232,18 @@ function saveData(){
  localStorage.setItem("lockedName",lockedName||"");
 }
 
-// Global Winners
+// ================= GLOBAL WINNERS REAL-TIME =================
 const globalEl=document.getElementById("globalWinners");
-function refreshGlobal(data){
- if(!data||data.length===0){
+db.ref("winners").on("value", snapshot=>{
+ const data = snapshot.val() || [];
+ if(data.length===0){
   globalEl.innerHTML="<b>Pemenang:</b><br>Belum ada pemenang";
  }else{
   globalEl.innerHTML="<b>Pemenang:</b><br>"+data.map(w=>`${w.name} → ${w.prize}`).join("<br>");
  }
-}
-db.ref("winners").on("value", snapshot=>{
- refreshGlobal(snapshot.val());
 });
 
-// Spin
+// ================= SPIN =================
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
@@ -142,6 +251,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  if(!name) return alert("Isi nama!");
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
 
+ // Apply code
  const codeInput=document.getElementById("code");
  const code=codeInput.value.trim().toUpperCase();
  if(code && CODES[code]){
@@ -184,8 +294,11 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
   if(lastPrize.win && !hasWon){
    hasWon=true;
    saveData();
-   const winnerRef = db.ref("winners").push();
-   winnerRef.set({name:lockedName, prize:lastPrize.label});
+   db.ref("winners").once("value").then(snapshot=>{
+    const current = snapshot.val() || [];
+    current.push({name:lockedName, prize:lastPrize.label});
+    db.ref("winners").set(current);
+   });
    document.getElementById("claimBtn").style.display="block";
   }
   saveData();
@@ -193,14 +306,14 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  },4200);
 });
 
-// Claim
+// ================= CLAIM =================
 document.getElementById("claimBtn").addEventListener("click",()=>{
  if(!lastPrize||!lastPrize.win) return;
  const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`);
  window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
 });
 
-// Admin
+// ================= ADMIN =================
 let tap=0;
 document.getElementById("title").addEventListener("click",()=>{
  tap++;
@@ -215,13 +328,13 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
   const data = snapshot.val() || [];
   if(data.length===0) return alert("Belum ada pemenang");
   let t="DAFTAR PEMENANG:\n\n";
-  Object.keys(data).forEach((k,i)=>t+=`${i+1}. ${data[k].name} - ${data[k].prize}\n`);
+  data.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize}\n`);
   alert(t);
  });
 });
 document.getElementById("resetBtn").addEventListener("click",()=>{
  if(!confirm("RESET SEMUA DATA?")) return;
- db.ref("winners").remove();
+ db.ref("winners").set([]);
  localStorage.clear();
  location.reload();
 });
