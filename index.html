@@ -52,15 +52,15 @@ button{
  transition:transform 4.2s cubic-bezier(.25,.1,.25,1);
 }
 
-/* ⬇️ PANAH BENER */
+/* ⬆️ PANAH FINAL */
 #arrow{
  position:absolute;
- bottom:-42px;
+ bottom:-38px;
  left:50%;
  transform:translateX(-50%);
- font-size:34px;
+ font-size:26px;          /* 🔥 DIPERKECIL */
  color:#fff;
- text-shadow:0 0 10px #00ffd5;
+ text-shadow:0 0 8px #00ffd5;
  z-index:10;
 }
 
@@ -104,7 +104,7 @@ small{color:#aaa}
 
 <div id="wheelBox">
  <canvas id="wheel" width="280" height="280"></canvas>
- <div id="arrow">⬇️</div>
+ <div id="arrow">⬆️</div>
 </div>
 
 <div id="result"></div>
@@ -137,7 +137,7 @@ const prizes=[
  {label:"VOUCHER FF",win:true}
 ];
 
-// KODE SPIN (EDIT BEBAS)
+// 🔑 CODE SPIN (EDIT DI SINI)
 const CODES={
  XREZ1:1,
  XREZ3:3,
@@ -205,13 +205,14 @@ function spin(){
   document.getElementById("name").disabled=true;
  }
 
- // KODE
- const code=document.getElementById("code").value.trim().toUpperCase();
+ /* ===== FIX CODE SPIN ===== */
+ const codeInput=document.getElementById("code");
+ const code=codeInput.value.trim().toUpperCase();
  if(code && CODES[code] && !usedCodes[code]){
   spins+=CODES[code];
   usedCodes[code]=true;
   localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
-  document.getElementById("code").value="";
+  codeInput.value="";
  }
 
  spins--;
@@ -285,4 +286,4 @@ function resetAll(){
 }
 </script>
 </body>
-</html>
+ </html>
