@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XREZZKY STORE RNG GIVEAWAY</title>
+<title>XREZZKYSTORE RNG GIVEAWAY</title>
 <style>
 body{
  margin:0;
@@ -123,7 +123,7 @@ small{
 </head>
 <body>
 <div class="box">
-<h2 id="title">XREZZKY STORE</h2>
+<h2 id="title">XREZZKYSTORE</h2>
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
 <input id="name" placeholder="Nama (1x saja)">
@@ -166,9 +166,11 @@ small{
 // ================= CONFIG =================
 const ADMIN_PIN="XREZZKY STORE0930";
 const ADMIN_WA="6288293064112";
-let MAX_SPIN_PER_USER = 0;
+let MAX_SPIN_PER_USER = 0; // default 0, spin hanya dari kode/admin
 let MAX_WIN_PER_DEVICE = 2;
 let MAX_WINNER_GLOBAL = 10;
+const WIN_CHANCE = 0.1;
+
 const prizes=[
  {label:"ZONK",win:false},
  {label:"CLASS(1)",win:true},
@@ -177,8 +179,6 @@ const prizes=[
  {label:"ZONK",win:false},
  {label:"TRAIN(1)+CLASS(1)",win:true}
 ];
-let CODES={};
-let WIN_CHANCE=0.1;
 
 // ================= FIREBASE =================
 const firebaseConfig = {
@@ -207,14 +207,13 @@ let hasWon=localStorage.getItem("hasWon")==="true";
 let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
 let lastPrize=null;
 
-// ================= FREE SPIN USER BARU =================
+// ================= FREE SPIN NEW USER =================
 const FREE_SPIN_NEW_USER = 5;
 if(!spinData[deviceId]) spinData[deviceId]=0;
 if(!localStorage.getItem("claimedFree")){
  spinData[deviceId] += FREE_SPIN_NEW_USER;
  localStorage.setItem("claimedFree","yes");
 }
-if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
 // ================= DRAW WHEEL =================
 const canvas=document.getElementById("wheel");
@@ -255,11 +254,6 @@ function saveData(){
  localStorage.setItem("totalSpin",totalSpin);
 }
 
-// ================= FETCH REALTIME CODES =================
-db.ref("adminConfig/codes").on("value", snapshot=>{
- CODES = snapshot.val() || {};
-});
-
 // ================= GLOBAL WINNERS & INFO =================
 const globalEl=document.getElementById("globalWinners");
 const infoBoard=document.getElementById("infoBoard");
@@ -278,28 +272,8 @@ db.ref("infoBoard").on("value", snapshot=>{
 
 // ================= SPIN =================
 let rot=0,lock=false;
-document.getElementById("spinBtn").addEventListener("click",()=>{
- if(lock) return;
- if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
- const name=document.getElementById("name").value.trim();
- if(!name) return alert("Isi nama!");
- if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
- totalSpin++;
- 
- // Apply code
- const codeInput=document.getElementById("code");
- const code=codeInput.value.trim().toUpperCase();
- if(code && CODES[code]){
-   const key=deviceId+"_"+code;
-   if(!usedCodes[key]){
-     spinData[deviceId]+=CODES[code];
-     usedCodes[key]=true;
-     saveData();
-     updateInfo();
-     codeInput.value="";
-     alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
-   } else alert(`⚠️ Code ${code} sudah digunakan!`);
- }
+
+function startSpin(){
  if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  spinData[deviceId]--;
  saveData();
@@ -307,9 +281,8 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
 
  db.ref("winners").once("value").then(snapshot=>{
   const winnersData=snapshot.val()||[];
-  if(winnersData.length>=MAX_WINNER_GLOBAL){ alert("Event telah selesai, tunggu event mendatang."); return; }
+  if(winnersData.length>=MAX_WINNER_GLOBAL){ alert("Event telah selesai."); return; }
 
-  // Tentukan prize
   let idx;
   const winPrizes=prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
   const losePrizes=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
@@ -336,13 +309,41 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
         db.ref("winners").set(current);
       });
       document.getElementById("claimBtn").style.display="block";
-      const t=encodeURIComponent(`Halo admin XREZZKY STORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}\n🕒 ${timeStamp}`);
+      const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}\n🕒 ${timeStamp}`);
       window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
     }
     saveData();
     updateInfo();
   },4200);
- });
+}
+
+document.getElementById("spinBtn").addEventListener("click",()=>{
+ if(lock) return;
+ const name=document.getElementById("name").value.trim();
+ if(!name) return alert("Isi nama!");
+ if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
+ totalSpin++;
+
+ // cek kode dari firebase realtime
+ const codeInput=document.getElementById("code");
+ const code=codeInput.value.trim().toUpperCase();
+ if(code){
+   db.ref(`adminConfig/codes/${code}`).once("value").then(snapshot=>{
+     const spinAdd = snapshot.val();
+     if(spinAdd){
+       const key=deviceId+"_"+code;
+       if(!usedCodes[key]){
+         spinData[deviceId]+=spinAdd;
+         usedCodes[key]=true;
+         saveData();
+         updateInfo();
+         codeInput.value="";
+         alert(`✅ Code ${code} berhasil! Spin +${spinAdd}`);
+       } else alert(`⚠️ Code ${code} sudah digunakan!`);
+     } else alert(`⚠️ Code ${code} tidak valid!`);
+     startSpin();
+   });
+ } else startSpin();
 });
 
 // ================= CLAIM =================
@@ -370,13 +371,13 @@ document.getElementById("updateInfoBtn").addEventListener("click",()=>{
  alert("Info event diperbarui!");
 });
 
-// Tambah kode baru
+// Tambah kode baru (admin) disimpan ke firebase realtime
 document.getElementById("addCodeBtn").addEventListener("click",()=>{
  const newCode=document.getElementById("newCode").value.trim().toUpperCase();
  const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
  if(newCode && spin>0){
    db.ref(`adminConfig/codes/${newCode}`).set(spin);
-   alert(`Code ${newCode} berhasil ditambahkan! Spin +${spin}`);
+   alert(`Code ${newCode} ditambahkan! Spin +${spin}`);
  } else alert("Masukkan kode dan spin dengan benar.");
 });
 
