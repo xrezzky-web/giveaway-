@@ -2,89 +2,79 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XREZZKYSTORE RNG GIVEAWAY</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>XREZZKYSTORE RNG</title>
 
 <style>
 body{
-  margin:0;
-  font-family:Arial,Helvetica,sans-serif;
-  background:radial-gradient(circle,#1f4f4f,#020b0b);
-  color:#fff;
+ margin:0;
+ background:radial-gradient(circle,#1f6f6f,#020b0b);
+ font-family:Arial;
+ color:#fff;
 }
-.container{
-  max-width:360px;
-  margin:40px auto;
-  background:#071414;
-  border-radius:18px;
-  padding:15px;
-  box-shadow:0 0 25px #00ffd5;
+.box{
+ width:360px;
+ margin:40px auto;
+ background:#071414;
+ border-radius:18px;
+ padding:15px;
+ box-shadow:0 0 25px #00ffd5;
 }
-h1{
-  text-align:center;
-  color:#00ffd5;
-  margin:5px 0;
-}
+h2{text-align:center;color:#00ffd5;margin:5px}
 input,button{
-  width:100%;
-  margin-top:8px;
-  padding:10px;
-  border-radius:8px;
-  border:none;
-  font-size:14px;
+ width:100%;
+ margin-top:8px;
+ padding:10px;
+ border-radius:8px;
+ border:none;
 }
-button{
-  background:#00ffd5;
-  font-weight:bold;
-}
+button{background:#00ffd5;font-weight:bold}
 #wheelBox{
-  position:relative;
-  width:280px;
-  height:280px;
-  margin:15px auto;
+ position:relative;
+ width:280px;
+ height:280px;
+ margin:15px auto;
 }
 #wheel{
-  width:100%;
-  height:100%;
-  border-radius:50%;
-  border:8px solid #00ffd5;
-  transition:transform 4s cubic-bezier(0.25,0.1,0.25,1);
+ width:100%;
+ height:100%;
+ border-radius:50%;
+ border:8px solid #00ffd5;
+ transition:transform 4s cubic-bezier(0.25,0.1,0.25,1);
 }
 #arrow{
-  position:absolute;
-  top:-10px;
-  left:50%;
-  transform:translateX(-50%);
-  width:0;
-  height:0;
-  border-left:12px solid transparent;
-  border-right:12px solid transparent;
-  border-bottom:20px solid white;
+ position:absolute;
+ top:-12px;
+ left:50%;
+ transform:translateX(-50%);
+ width:0;height:0;
+ border-left:12px solid transparent;
+ border-right:12px solid transparent;
+ border-bottom:22px solid white;
 }
 .log{
-  background:#000;
-  margin-top:10px;
-  padding:8px;
-  height:100px;
-  overflow:auto;
-  font-size:12px;
+ background:#000;
+ padding:8px;
+ height:120px;
+ overflow:auto;
+ font-size:12px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-<h1>XREZZKYSTORE</h1>
-<p style="text-align:center;font-size:12px;">RNG GIVEAWAY SYSTEM</p>
+<div class="box">
+<h2>XREZZKYSTORE</h2>
+<p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
-<input id="name" placeholder="Nama kamu">
+<input id="name" placeholder="Nama (1x saja)">
 <input id="code" placeholder="Kode tambahan (opsional)">
 <button onclick="spin()">🎰 SPIN RNG</button>
 
 <div id="wheelBox">
-  <div id="arrow"></div>
-  <canvas id="wheel" width="280" height="280"></canvas>
+ <div id="arrow"></div>
+ <canvas id="wheel" width="280" height="280"></canvas>
 </div>
 
 <div id="result"></div>
@@ -92,8 +82,8 @@ button{
 </div>
 
 <script>
-// ===== DATA HADIAH =====
-let prizes=[
+// ===== HADIAH =====
+const prizes=[
  "Saldo DANA 5K",
  "Diamond FF",
  "ZONK",
@@ -102,21 +92,28 @@ let prizes=[
  "ZONK"
 ];
 
-// ===== CODE TAMBAHAN =====
-let codes={
+// ===== CODE =====
+const codes={
  "XREZ1":1,
  "XREZ3":3
 };
 
-// ===== DEVICE LOCK =====
-const deviceId = localStorage.getItem("deviceId") || (() => {
-  const id = "dev-" + Math.random().toString(36).substr(2,9);
-  localStorage.setItem("deviceId",id);
-  return id;
+// ===== DEVICE ID =====
+const deviceId=localStorage.getItem("devId")||(()=>{
+ const id="dev-"+Math.random().toString(36).slice(2);
+ localStorage.setItem("devId",id);
+ return id;
 })();
 
-let spins = JSON.parse(localStorage.getItem("spins")||"{}");
-let usedCodes = JSON.parse(localStorage.getItem("usedCodes")||"{}");
+// ===== SPIN DATA =====
+let spins=JSON.parse(localStorage.getItem("spins")||"{}");
+let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
+
+// DEFAULT 1 SPIN GRATIS
+if(spins[deviceId]==null){
+ spins[deviceId]=1;
+ localStorage.setItem("spins",JSON.stringify(spins));
+}
 
 // ===== DRAW WHEEL =====
 const canvas=document.getElementById("wheel");
@@ -124,7 +121,7 @@ const ctx=canvas.getContext("2d");
 const center=140;
 const slice=2*Math.PI/prizes.length;
 
-function drawWheel(){
+function draw(){
  for(let i=0;i<prizes.length;i++){
   ctx.beginPath();
   ctx.moveTo(center,center);
@@ -140,43 +137,44 @@ function drawWheel(){
   ctx.restore();
  }
 }
-drawWheel();
+draw();
 
-// ===== SPIN LOGIC =====
-let currentRotation=0;
-let locked=false;
+// ===== SPIN =====
+let rot=0,lock=false;
 
 function spin(){
- if(locked) return;
-
+ if(lock) return;
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
 
- spins[deviceId]=spins[deviceId]||0;
-
- if(spins[deviceId]<=0){
-  const c=document.getElementById("code").value.trim();
-  if(!codes[c]||usedCodes[c]) return alert("Spin habis!");
+ // tambah spin dari code
+ const c=document.getElementById("code").value.trim();
+ if(c && codes[c] && !usedCodes[c]){
   spins[deviceId]+=codes[c];
   usedCodes[c]=true;
  }
+
+ if(spins[deviceId]<=0) return alert("Spin habis!");
 
  spins[deviceId]--;
  localStorage.setItem("spins",JSON.stringify(spins));
  localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
 
- const index=Math.floor(Math.random()*prizes.length);
- const targetAngle=(360/prizes.length)*index;
- const spinAngle=360*5 + (360 - targetAngle) - (currentRotation%360);
+ // RNG FINAL (1 sumber kebenaran)
+ const finalIndex=Math.floor(Math.random()*prizes.length);
+ const anglePer=360/prizes.length;
+ const target=anglePer*finalIndex;
+ const spinAngle=360*5+(360-target)-(rot%360);
 
- currentRotation+=spinAngle;
- locked=true;
- canvas.style.transform=`rotate(${currentRotation}deg)`;
+ rot+=spinAngle;
+ lock=true;
+ canvas.style.transform=`rotate(${rot}deg)`;
 
  setTimeout(()=>{
-  locked=false;
-  document.getElementById("result").innerText=`🎉 ${name} mendapatkan: ${prizes[index]}`;
-  document.getElementById("log").innerHTML+=`<div>${name} → ${prizes[index]}</div>`;
+  lock=false;
+  const prize=prizes[finalIndex];
+  document.getElementById("result").innerText=`🎉 ${name} mendapatkan: ${prize}`;
+  document.getElementById("log").innerHTML+=`<div>${name} → ${prize}</div>`;
  },4200);
 }
 </script>
