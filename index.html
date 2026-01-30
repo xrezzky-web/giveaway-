@@ -54,13 +54,13 @@ button{
 }
 #arrow{
  position:absolute;
- top:-26px;
+ bottom:-26px;              /* 🔥 PANAH DI BAWAH */
  left:50%;
  transform:translateX(-50%);
  width:0;height:0;
  border-left:16px solid transparent;
  border-right:16px solid transparent;
- border-bottom:30px solid #ffffff;
+ border-top:30px solid #ffffff; /* 🔥 ARAH KE ATAS (NUNJUK RODA) */
  z-index:10;
 }
 .log{
@@ -102,8 +102,8 @@ small{color:#aaa}
 <button onclick="spin()">🎰 SPIN RNG</button>
 
 <div id="wheelBox">
- <div id="arrow"></div>
  <canvas id="wheel" width="280" height="280"></canvas>
+ <div id="arrow"></div>
 </div>
 
 <div id="result"></div>
@@ -122,7 +122,7 @@ small{color:#aaa}
 
 <script>
 // ================= ADMIN CONFIG =================
-const ADMIN_PIN = "12345"; // 🔴 GANTI PIN DI SINI
+const ADMIN_PIN = "12345"; // ganti sendiri
 const ADMIN_WA = "088293064112";
 const MAX_WINNER = 10;
 
@@ -215,7 +215,8 @@ function spin(){
   idx=Math.floor(Math.random()*prizes.length);
  }
 
- const target=270-(idx*anglePer)-anglePer/2;
+ // 🔥 PANAH DI BAWAH = REFERENSI 90°
+ const target=90-(idx*anglePer)-anglePer/2;
  const spinAngle=360*6+(target-(rot%360));
  rot+=spinAngle; lock=true;
  canvas.style.transform=`rotate(${rot}deg)`;
