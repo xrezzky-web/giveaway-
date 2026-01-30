@@ -155,6 +155,7 @@ small{
 </div>
 
 <script type="module">
+// ================= FIREBASE =================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-app.js";
 import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-database.js";
 
@@ -220,7 +221,7 @@ function drawWheel(){
   ctx.translate(c,c);
   ctx.rotate(i*slice+slice/2);
   ctx.fillStyle="#000";
-  ctx.font="bold 12px Arial";
+  ctx.font="bold 14px Arial";
   ctx.textAlign="center";
   ctx.fillText(prizes[i].label,70,5);
   ctx.restore();
