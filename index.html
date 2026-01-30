@@ -43,6 +43,7 @@ button{
  background:#00ffd5;
  font-weight:bold;
  cursor:pointer;
+ color:#000;
 }
 #wheelBox{
  position:relative;
@@ -56,6 +57,7 @@ button{
  border-radius:50%;
  border:8px solid #00ffd5;
  transition: transform 4s cubic-bezier(.25,.1,.25,1);
+ background:#071414;
 }
 #arrow{
  position:absolute;
@@ -152,7 +154,6 @@ small{
 </div>
 </div>
 
-<!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-app.js";
 import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-database.js";
@@ -161,7 +162,7 @@ import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstati
 const ADMIN_PIN="12345";
 const ADMIN_WA="6288293064112";
 const MAX_WINNER=10;
-const WIN_CHANCE = 0.15; // Chance menang 15%, ubah ini untuk susah/mudah
+const WIN_CHANCE = 0.15;
 const prizes=[
  {label:"ZONK",win:false},
  {label:"DANA 5K",win:true},
@@ -170,11 +171,7 @@ const prizes=[
  {label:"ZONK",win:false},
  {label:"VOUCHER FF",win:true}
 ];
-const CODES={
- XREZ1:1,
- XREZ3:3,
- VIP5:5
-};
+const CODES={ XREZ1:1, XREZ3:3, VIP5:5 };
 
 // ================= STORAGE =================
 const deviceId=localStorage.getItem("devId") || (()=>{      
@@ -210,20 +207,26 @@ const canvas=document.getElementById("wheel");
 const ctx=canvas.getContext("2d");      
 const c=140;      
 const slice=2*Math.PI/prizes.length;      
-for(let i=0;i<prizes.length;i++){      
- ctx.beginPath();      
- ctx.moveTo(c,c);      
- ctx.fillStyle=`hsl(${i*360/prizes.length},80%,55%)`;      
- ctx.arc(c,c,140,i*slice,(i+1)*slice);      
- ctx.fill();      
- ctx.save();      
- ctx.translate(c,c);      
- ctx.rotate(i*slice+slice/2);      
- ctx.fillStyle="#000";      
- ctx.font="bold 12px Arial";      
- ctx.fillText(prizes[i].label,50,5);      
- ctx.restore();      
-}      
+
+function drawWheel(){
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ for(let i=0;i<prizes.length;i++){
+  ctx.beginPath();
+  ctx.moveTo(c,c);
+  ctx.fillStyle=`hsl(${i*360/prizes.length},80%,55%)`;
+  ctx.arc(c,c,140,i*slice,(i+1)*slice);
+  ctx.fill();
+  ctx.save();
+  ctx.translate(c,c);
+  ctx.rotate(i*slice+slice/2);
+  ctx.fillStyle="#000";
+  ctx.font="bold 12px Arial";
+  ctx.textAlign="center";
+  ctx.fillText(prizes[i].label,70,5);
+  ctx.restore();
+ }
+}
+drawWheel();
 
 // ================= UTIL =================
 function updateInfo(){      
@@ -287,6 +290,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
   lastPrize=prizes[idx];      
   document.getElementById("result").innerText=`🎉 ${lockedName} mendapatkan ${lastPrize.label}`;      
   document.getElementById("log").innerHTML+=`<div>${lockedName} → ${lastPrize.label}</div>`;      
+  drawWheel();
 
   // Simpan ke global Firebase
   if(lastPrize.win && !hasWon){
