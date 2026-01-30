@@ -153,6 +153,10 @@ small{
 </div>
 </div>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <script>
 // ================= CONFIG =================
 const ADMIN_PIN="12345";
@@ -171,7 +175,21 @@ const CODES={
  XREZ3:3,
  VIP5:5
 };
-const WIN_CHANCE = 0.15; // 15% chance menang (ubah sesuai keinginan)
+const WIN_CHANCE = 0.15; // 15% chance menang
+
+// ================= Firebase =================
+const firebaseConfig = {
+ apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
+ authDomain: "xrezzkystore-rng.firebaseapp.com",
+ databaseURL: "https://xrezzkystore-rng-default-rtdb.asia-southeast1.firebasedatabase.app",
+ projectId: "xrezzkystore-rng",
+ storageBucket: "xrezzkystore-rng.appspot.com",
+ messagingSenderId: "304889774590",
+ appId: "1:304889774590:web:5d52c2485ca2137ad480af",
+ measurementId: "G-MQ71QRYHV7"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 // ================= STORAGE =================
 const deviceId=localStorage.getItem("devId") || (()=>{ 
@@ -181,7 +199,6 @@ const deviceId=localStorage.getItem("devId") || (()=>{
 })();
 let spinData=JSON.parse(localStorage.getItem("spinData")||"{}");
 let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
-let winners=JSON.parse(localStorage.getItem("winners")||"[]");
 let lockedName=localStorage.getItem("lockedName");
 let hasWon=localStorage.getItem("hasWon")==="true";
 let lastPrize=null;
@@ -218,26 +235,27 @@ function updateInfo(){
 function saveData(){
  localStorage.setItem("spinData",JSON.stringify(spinData));
  localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
- localStorage.setItem("winners",JSON.stringify(winners));
  localStorage.setItem("hasWon",hasWon?"true":"false");
  localStorage.setItem("lockedName",lockedName||"");
 }
 
 // ================= GLOBAL WINNERS =================
 function updateGlobalWinners(){
- const el=document.getElementById("globalWinners");
- if(winners.length===0){
-  el.innerHTML="<b>Pemenang:</b><br>Belum ada pemenang";
- }else{
-  el.innerHTML="<b>Pemenang:</b><br>"+winners.map(w=>`${w.name} → ${w.prize}`).join("<br>");
- }
+ db.ref("winners").once("value").then(snapshot=>{
+  const data = snapshot.val() || [];
+  const el=document.getElementById("globalWinners");
+  if(data.length===0){
+   el.innerHTML="<b>Pemenang:</b><br>Belum ada pemenang";
+  } else {
+   el.innerHTML="<b>Pemenang:</b><br>"+data.map(w=>`${w.name} → ${w.prize}`).join("<br>");
+  }
+ });
 }
 
 // ================= SPIN =================
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
- if(winners.length>=MAX_WINNER) return alert("Giveaway selesai!");
 
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
@@ -290,7 +308,13 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
    `<div>${lockedName} → ${lastPrize.label}</div>`;
   if(lastPrize.win && !hasWon){
    hasWon=true;
-   winners.push({name:lockedName,prize:lastPrize.label});
+   saveData();
+   db.ref("winners").once("value").then(snapshot=>{
+    const current = snapshot.val() || [];
+    current.push({name:lockedName, prize:lastPrize.label});
+    db.ref("winners").set(current);
+    updateGlobalWinners();
+   });
    document.getElementById("claimBtn").style.display="block";
   }
   saveData();
@@ -318,16 +342,21 @@ document.getElementById("title").addEventListener("click",()=>{
  }
 });
 document.getElementById("exportBtn").addEventListener("click",()=>{
- if(winners.length===0) return alert("Belum ada pemenang");
- let t="DAFTAR PEMENANG:\n\n";
- winners.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize}\n`);
- alert(t);
+ db.ref("winners").once("value").then(snapshot=>{
+  const data = snapshot.val() || [];
+  if(data.length===0) return alert("Belum ada pemenang");
+  let t="DAFTAR PEMENANG:\n\n";
+  data.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize}\n`);
+  alert(t);
+ });
 });
 document.getElementById("resetBtn").addEventListener("click",()=>{
  if(!confirm("RESET SEMUA DATA?")) return;
+ db.ref("winners").set([]);
  localStorage.clear();
  location.reload();
 });
+
 updateInfo();
 </script>
 </body>
