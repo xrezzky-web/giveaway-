@@ -6,55 +6,56 @@
 <title>XREZZKYSTORE RNG GIVEAWAY</title>
 
 <style>
+*{box-sizing:border-box}
 body{
   margin:0;
-  font-family:Arial,Helvetica,sans-serif;
-  background:radial-gradient(circle at top,#0ff2,#000 70%);
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
+  background:radial-gradient(circle at top,#18eaea55,#05060c 70%);
+  font-family:Arial,Helvetica,sans-serif;
   color:#fff;
 }
 .card{
-  width:320px;
-  background:#050b10;
+  width:330px;
+  background:#050b12;
   border-radius:18px;
-  padding:18px;
-  box-shadow:0 0 25px #0ff6;
+  padding:16px;
   text-align:center;
+  box-shadow:0 0 30px #00ffff55;
 }
-h1{
-  font-size:18px;
-  margin-bottom:2px;
-  color:#00ffff;
-}
-small{color:#7ff}
+h1{color:#00ffff;font-size:18px;margin:4px 0}
+small{color:#7ff;font-size:11px}
+
 input,button{
   width:100%;
-  margin-top:8px;
   padding:10px;
-  border-radius:10px;
+  margin-top:8px;
   border:none;
-  outline:none;
+  border-radius:10px;
 }
 input{
-  background:#111;
+  background:#0b141c;
   color:#0ff;
 }
 button{
   background:#00ffff;
+  color:#000;
   font-weight:bold;
   cursor:pointer;
+  position:relative;
+  z-index:5;
 }
 button:disabled{
   background:#044;
-  cursor:not-allowed;
+  color:#8ff;
 }
+
 #wheel-box{
-  margin:15px auto;
   width:220px;
   height:220px;
+  margin:14px auto;
   position:relative;
 }
 #wheel{
@@ -62,30 +63,21 @@ button:disabled{
   height:100%;
   border-radius:50%;
   border:8px solid #0ff;
-  background:conic-gradient(
-    #ff0055 0deg 60deg,
-    #ffaa00 60deg 120deg,
-    #00ffaa 120deg 180deg,
-    #0055ff 180deg 240deg,
-    #aa00ff 240deg 300deg,
-    #ff5500 300deg 360deg
-  );
   transition:transform 4s cubic-bezier(.17,.67,.24,1);
 }
 #pointer{
   position:absolute;
-  top:-12px;
+  top:-14px;
   left:50%;
   transform:translateX(-50%);
-  font-size:28px;
+  font-size:26px;
 }
-#result{
-  margin-top:10px;
-  font-weight:bold;
-}
+
+#result{margin-top:6px;font-weight:bold;min-height:22px}
+
 .list{
   background:#000;
-  margin-top:10px;
+  margin-top:8px;
   padding:8px;
   border-radius:8px;
   max-height:90px;
@@ -93,30 +85,18 @@ button:disabled{
   font-size:12px;
   text-align:left;
 }
-.admin{
-  display:none;
-  margin-top:10px;
-  border-top:1px solid #033;
-  padding-top:10px;
-}
-.admin button{
-  background:#ff4444;
-}
-footer{
-  margin-top:10px;
-  font-size:10px;
-  color:#666;
-}
+
+footer{margin-top:8px;font-size:10px;color:#666}
 </style>
 </head>
-<body>
 
+<body>
 <div class="card">
   <h1>XREZZKYSTORE</h1>
   <small>RNG GIVEAWAY SYSTEM</small>
 
-  <input id="name" placeholder="Nama peserta" />
-  <button onclick="spin()">🎰 SPIN RNG</button>
+  <input id="name" placeholder="Nama peserta">
+  <button id="spinBtn" onclick="spin()">🎰 SPIN RNG</button>
 
   <div id="wheel-box">
     <div id="pointer">⬇️</div>
@@ -124,70 +104,85 @@ footer{
   </div>
 
   <div id="result">Siap mengundi…</div>
-
   <div class="list" id="winnerList"></div>
   <div class="list" id="logList"></div>
-
-  <div class="admin" id="adminPanel">
-    <input id="chance" type="number" step="0.05" placeholder="Win chance (0.25)">
-    <input id="maxwin" type="number" placeholder="Max pemenang (10)">
-    <button onclick="saveAdmin()">💾 Simpan</button>
-    <button onclick="resetAll()">🔒 Reset Giveaway</button>
-  </div>
 
   <footer>© XREZZKYSTORE OFFICIAL</footer>
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-let WIN_CHANCE = localStorage.getItem("chance") ? Number(localStorage.getItem("chance")) : 0.25;
-let MAX_WINNERS = localStorage.getItem("maxwin") ? Number(localStorage.getItem("maxwin")) : 10;
-const ADMIN_PIN = "1234"; // GANTI INI
-/* ========================================= */
+/* ========= CONFIG ========= */
+const PRIZES = [
+  "Saldo DANA 5K",
+  "ZONK",
+  "Voucher FF",
+  "ZONK",
+  "Saldo DANA 10K",
+  "ZONK"
+];
+const MAX_WINNERS = 10;
+/* ========================== */
 
-const deviceId = localStorage.getItem("device_id") ||
-  crypto.randomUUID();
-localStorage.setItem("device_id", deviceId);
+let isSpinning = false;
+const anglePerSlice = 360 / PRIZES.length;
 
 let winners = JSON.parse(localStorage.getItem("winners")||"[]");
 let logs = JSON.parse(localStorage.getItem("logs")||"[]");
 
-function spin(){
-  const nameInput = document.getElementById("name");
-  if(!nameInput.value){
-    alert("Isi nama dulu!");
-    return;
-  }
+/* ===== BUILD WHEEL ===== */
+function buildWheel(){
+  const wheel = document.getElementById("wheel");
+  const colors = ["#ff004c","#ffaa00","#00ffaa","#0066ff","#aa00ff","#ff6600"];
+  let bg = "conic-gradient(";
+  PRIZES.forEach((p,i)=>{
+    bg += `${colors[i%colors.length]} ${i*anglePerSlice}deg ${(i+1)*anglePerSlice}deg,`;
+  });
+  wheel.style.background = bg.slice(0,-1)+")";
+}
+buildWheel();
 
-  if(localStorage.getItem("locked")){
-    alert("Device ini sudah digunakan!");
-    return;
-  }
+/* ===== SPIN ===== */
+function spin(){
+  if(isSpinning) return;
+
+  const name = document.getElementById("name").value.trim();
+  if(!name) return alert("Isi nama dulu!");
 
   if(winners.length >= MAX_WINNERS){
-    document.getElementById("result").innerText="❌ Giveaway sudah penuh";
+    document.getElementById("result").innerText="❌ Giveaway penuh";
     return;
   }
 
+  isSpinning = true;
+  document.getElementById("spinBtn").disabled = true;
+
+  const prizeIndex = Math.floor(Math.random()*PRIZES.length);
+  const prize = PRIZES[prizeIndex];
+
+  const stopAngle =
+    360*5 +
+    (360 - (prizeIndex*anglePerSlice + anglePerSlice/2));
+
   const wheel = document.getElementById("wheel");
-  const deg = 360*5 + Math.floor(Math.random()*360);
-  wheel.style.transform = `rotate(${deg}deg)`;
+  wheel.style.transform = `rotate(${stopAngle}deg)`;
 
   document.getElementById("result").innerText="🎲 Mengundi...";
 
   setTimeout(()=>{
-    const roll = Math.random();
-    if(roll <= WIN_CHANCE){
-      winners.push(nameInput.value);
-      localStorage.setItem("locked","yes");
-      document.getElementById("result").innerText="🏆 MENANG: "+nameInput.value;
-      logs.push("MENANG - "+nameInput.value);
+    if(prize !== "ZONK"){
+      winners.push(name+" - "+prize);
+      logs.push("MENANG - "+name+" ("+prize+")");
+      document.getElementById("result").innerText="🏆 "+prize;
     }else{
+      logs.push("ZONK - "+name);
       document.getElementById("result").innerText="❌ ZONK";
-      logs.push("ZONK - "+nameInput.value);
     }
+
     save();
     render();
+
+    isSpinning = false;
+    document.getElementById("spinBtn").disabled = false;
   },4000);
 }
 
@@ -198,43 +193,11 @@ function save(){
 
 function render(){
   document.getElementById("winnerList").innerHTML =
-    "🏆 Pemenang ("+winners.length+"/"+MAX_WINNERS+")<br>"+winners.join("<br>");
+    "🏆 Pemenang:<br>"+winners.join("<br>");
   document.getElementById("logList").innerHTML =
     "📜 Log:<br>"+logs.slice(-10).join("<br>");
 }
 render();
-
-/* ===== ADMIN SECRET ===== */
-let buffer="";
-document.addEventListener("keydown",e=>{
-  buffer+=e.key;
-  if(buffer.includes("admin")){
-    const pin = prompt("Admin PIN:");
-    if(pin===ADMIN_PIN){
-      document.getElementById("adminPanel").style.display="block";
-      document.getElementById("chance").value=WIN_CHANCE;
-      document.getElementById("maxwin").value=MAX_WINNERS;
-    }
-    buffer="";
-  }
-});
-
-function saveAdmin(){
-  WIN_CHANCE = Number(document.getElementById("chance").value);
-  MAX_WINNERS = Number(document.getElementById("maxwin").value);
-  localStorage.setItem("chance",WIN_CHANCE);
-  localStorage.setItem("maxwin",MAX_WINNERS);
-  alert("Disimpan");
-  render();
-}
-
-function resetAll(){
-  if(confirm("Reset semua data?")){
-    localStorage.clear();
-    location.reload();
-  }
-}
 </script>
-
 </body>
 </html>
