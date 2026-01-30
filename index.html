@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XREZZKYSTORE RNG GIVEAWAY</title>
+<title>XREZZKY STORE RNG GIVEAWAY</title>
 <style>
 body{
  margin:0;
@@ -153,8 +153,6 @@ small{
  <input id="maxSpinDevice" placeholder="Max Spin Per Device">
  <input id="maxWinDevice" placeholder="Max Hadiah Per Device">
  <input id="maxWinnerGlobal" placeholder="Max Pemenang Global">
- <textarea id="prizeSlots" placeholder="Masukkan slot roda, tiap baris 1 hadiah"></textarea>
- <button id="updateSlotsBtn">💠 Update Slot Roda</button>
  <button id="resetSpinBtn">♻ Reset Spin Semua User</button>
  <button id="restartWinnersBtn">🔄 Reset Pemenang</button>
  <button id="exportBtn">📤 EXPORT PEMENANG</button>
@@ -168,10 +166,10 @@ small{
 // ================= CONFIG =================
 const ADMIN_PIN="XREZZKY STORE0930";
 const ADMIN_WA="6288293064112";
-let MAX_SPIN_PER_USER = 0; // ambil dari adminConfig
+let MAX_SPIN_PER_USER = 0;
 let MAX_WIN_PER_DEVICE = 2;
 let MAX_WINNER_GLOBAL = 10;
-let prizes=[
+const prizes=[
  {label:"ZONK",win:false},
  {label:"CLASS(1)",win:true},
  {label:"ZONK",win:false},
@@ -179,7 +177,7 @@ let prizes=[
  {label:"ZONK",win:false},
  {label:"TRAIN(1)+CLASS(1)",win:true}
 ];
-let CODES={ XREZ1:1, XREZ3:3, VIP5:5, MEMBER50:50};
+let CODES={};
 let WIN_CHANCE=0.1;
 
 // ================= FIREBASE =================
@@ -209,29 +207,13 @@ let hasWon=localStorage.getItem("hasWon")==="true";
 let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
 let lastPrize=null;
 
-// ================= ADMIN CONFIG =================
-db.ref("adminConfig").once("value").then(snapshot=>{
- const cfg = snapshot.val();
- if(cfg){
-   MAX_SPIN_PER_USER = cfg.maxSpinPerUser || MAX_SPIN_PER_USER;
-   MAX_WIN_PER_DEVICE = cfg.maxWinPerDevice || MAX_WIN_PER_DEVICE;
-   MAX_WINNER_GLOBAL = cfg.maxWinnerGlobal || MAX_WINNER_GLOBAL;
-   CODES = cfg.codes || CODES;
-   prizes = cfg.prizes || prizes;
-   drawWheel();
-   updateInfo();
- }
-});
-
-// ============ FREE SPIN USER BARU ============
+// ================= FREE SPIN USER BARU =================
 const FREE_SPIN_NEW_USER = 5;
-const FREE_SPIN_ACTIVE = true;
 if(!spinData[deviceId]) spinData[deviceId]=0;
-if(!localStorage.getItem("claimedFree") && FREE_SPIN_ACTIVE){
+if(!localStorage.getItem("claimedFree")){
  spinData[deviceId] += FREE_SPIN_NEW_USER;
  localStorage.setItem("claimedFree","yes");
 }
-
 if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
 // ================= DRAW WHEEL =================
@@ -251,7 +233,7 @@ function drawWheel(){
    ctx.translate(c,c);
    ctx.rotate(i*slice+slice/2);
    ctx.fillStyle="#000";
-   ctx.font=`bold ${12}px Arial`;
+   ctx.font="bold 12px Arial";
    ctx.fillText(prizes[i].label,50,5);
    ctx.restore();
  }
@@ -272,6 +254,11 @@ function saveData(){
  localStorage.setItem("lockedName",lockedName||"");
  localStorage.setItem("totalSpin",totalSpin);
 }
+
+// ================= FETCH REALTIME CODES =================
+db.ref("adminConfig/codes").on("value", snapshot=>{
+ CODES = snapshot.val() || {};
+});
 
 // ================= GLOBAL WINNERS & INFO =================
 const globalEl=document.getElementById("globalWinners");
@@ -349,7 +336,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
         db.ref("winners").set(current);
       });
       document.getElementById("claimBtn").style.display="block";
-      const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}\n🕒 ${timeStamp}`);
+      const t=encodeURIComponent(`Halo admin XREZZKY STORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}\n🕒 ${timeStamp}`);
       window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
     }
     saveData();
@@ -361,7 +348,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
 // ================= CLAIM =================
 document.getElementById("claimBtn").addEventListener("click",()=>{
  if(!lastPrize||!lastPrize.win) return;
- const t=encodeURIComponent(`Halo admin XREZZKY STORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`);
+ const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`);
  window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
 });
 
@@ -387,10 +374,9 @@ document.getElementById("updateInfoBtn").addEventListener("click",()=>{
 document.getElementById("addCodeBtn").addEventListener("click",()=>{
  const newCode=document.getElementById("newCode").value.trim().toUpperCase();
  const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
- if(newCode && spin>0){ 
-    CODES[newCode]=spin; 
-    db.ref("adminConfig/codes").set(CODES); // update global
-    alert(`Code ${newCode} ditambahkan! Spin +${spin}`);
+ if(newCode && spin>0){
+   db.ref(`adminConfig/codes/${newCode}`).set(spin);
+   alert(`Code ${newCode} berhasil ditambahkan! Spin +${spin}`);
  } else alert("Masukkan kode dan spin dengan benar.");
 });
 
@@ -398,35 +384,17 @@ document.getElementById("addCodeBtn").addEventListener("click",()=>{
 document.getElementById("maxSpinDevice").addEventListener("change",()=>{
  const v=parseInt(document.getElementById("maxSpinDevice").value)||0;
  MAX_SPIN_PER_USER=v;
- db.ref("adminConfig/maxSpinPerUser").set(v);
  alert(`Max spin per device diubah menjadi ${v}`);
 });
 document.getElementById("maxWinDevice").addEventListener("change",()=>{
  const v=parseInt(document.getElementById("maxWinDevice").value)||0;
  MAX_WIN_PER_DEVICE=v;
- db.ref("adminConfig/maxWinPerDevice").set(v);
  alert(`Max hadiah per device diubah menjadi ${v}`);
 });
 document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{
  const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0;
  MAX_WINNER_GLOBAL=v;
- db.ref("adminConfig/maxWinnerGlobal").set(v);
  alert(`Max pemenang global diubah menjadi ${v}`);
-});
-
-// ================= SLOT RODA =================
-document.getElementById("updateSlotsBtn").addEventListener("click",()=>{
- const lines=document.getElementById("prizeSlots").value.split("\n").map(l=>l.trim()).filter(l=>l);
- if(lines.length>0){
-   prizes.length=0;
-   lines.forEach(l=>{
-     let win=l.includes("(1)")||l.toUpperCase().includes("WIN");
-     prizes.push({label:l, win:win});
-   });
-   drawWheel();
-   db.ref("adminConfig/prizes").set(prizes);
-   alert("Slot roda diperbarui!");
- }
 });
 
 // Reset spin semua user
