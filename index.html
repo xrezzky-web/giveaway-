@@ -10,27 +10,34 @@ body{
  background:radial-gradient(circle,#1f6f6f,#020b0b);
  font-family:Arial,Helvetica,sans-serif;
  color:#fff;
+ display:flex;
+ justify-content:center;
 }
 .box{
  width:360px;
- margin:30px auto;
+ margin:30px 10px;
  background:#071414;
  border-radius:18px;
- padding:15px;
+ padding:20px;
  box-shadow:0 0 25px #00ffd5;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
 }
 h2{
  text-align:center;
  color:#00ffd5;
- margin:5px;
+ margin:5px 0;
  cursor:pointer;
 }
 input,button{
  width:100%;
- margin-top:8px;
+ margin-top:10px;
  padding:10px;
  border-radius:8px;
  border:none;
+ box-sizing:border-box;
+ font-size:14px;
 }
 button{
  background:#00ffd5;
@@ -41,7 +48,7 @@ button{
  position:relative;
  width:280px;
  height:280px;
- margin:15px auto 30px auto;
+ margin:20px auto;
 }
 #wheel{
  width:100%;
@@ -60,32 +67,49 @@ button{
  text-shadow:0 0 8px #00ffd5;
  z-index:10;
 }
+#result{
+ margin-top:15px;
+ font-size:16px;
+ font-weight:bold;
+ text-align:center;
+}
 .log{
  background:#000;
- padding:8px;
+ padding:10px;
  height:120px;
  overflow:auto;
  font-size:12px;
- margin-top:18px;
+ margin-top:20px;
+ width:100%;
+ border-radius:8px;
 }
-small{color:#aaa}
+small{
+ color:#aaa;
+ margin-top:8px;
+ display:block;
+ text-align:center;
+}
 #claimBtn{
  background:#25D366;
  color:#000;
+ margin-top:10px;
  display:none;
+ width:100%;
 }
 #adminPanel{
  display:none;
  background:#020b0b;
  padding:10px;
  border-radius:10px;
- margin-top:10px;
+ margin-top:15px;
  border:1px solid #00ffd5;
+ width:100%;
 }
 #adminPanel button{
  background:#ff5555;
  color:#fff;
  margin-top:5px;
+ width:100%;
 }
 </style>
 </head>
@@ -121,8 +145,6 @@ small{color:#aaa}
 const ADMIN_PIN="12345";
 const ADMIN_WA="6288293064112";
 const MAX_WINNER=10;
-
-// HADIAH
 const prizes=[
  {label:"ZONK",win:false},
  {label:"DANA 5K",win:true},
@@ -131,8 +153,6 @@ const prizes=[
  {label:"ZONK",win:false},
  {label:"VOUCHER FF",win:true}
 ];
-
-// ===== PERBAIKAN CODE SPIN =====
 const CODES={
  XREZ1:1,
  XREZ3:3,
@@ -152,7 +172,6 @@ let lockedName=localStorage.getItem("lockedName");
 let hasWon=localStorage.getItem("hasWon")==="true";
 let lastPrize=null;
 
-// default 1 spin jika belum ada
 if(spinData[deviceId]==null){ spinData[deviceId]=1; saveData(); }
 if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
@@ -201,7 +220,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  if(!name) return alert("Isi nama!");
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
 
- // ✅ Perbaikan code spin
  const codeInput=document.getElementById("code");
  const code=codeInput.value.trim().toUpperCase();
  if(code && CODES[code]){
@@ -223,7 +241,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  saveData();
  updateInfo();
 
- // pilih prize
  let idx;
  if(hasWon){
   const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
@@ -231,7 +248,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  }else{
   idx=Math.floor(Math.random()*prizes.length);
  }
-
  const anglePer=360/prizes.length;
  const target=90-(idx*anglePer)-anglePer/2;
  rot+=360*6+(target-(rot%360));
