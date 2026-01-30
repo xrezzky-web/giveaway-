@@ -259,7 +259,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  saveData();
  updateInfo();
 
- // RNG susah/mudah
  let idx;
  const winPrizes = prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
  const losePrizes = prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
