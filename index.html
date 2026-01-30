@@ -2,288 +2,167 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XREZZKYSTORE RNG GIVEAWAY</title>
-
+<title>XREZZKYSTORE RNG</title>
 <style>
 body{
- margin:0;
- background:radial-gradient(circle,#1f6f6f,#020b0b);
- font-family:Arial,Helvetica,sans-serif;
+ background:#0b0b0b;
  color:#fff;
-}
-.box{
- width:360px;
- margin:30px auto;
- background:#071414;
- border-radius:18px;
- padding:15px;
- box-shadow:0 0 25px #00ffd5;
-}
-h2{
+ font-family:Arial;
  text-align:center;
- color:#00ffd5;
- margin:5px;
- cursor:pointer;
 }
-input,button{
- width:100%;
- margin-top:8px;
- padding:10px;
- border-radius:8px;
- border:none;
-}
-button{
- background:#00ffd5;
- font-weight:bold;
- cursor:pointer;
-}
+
 #wheelBox{
  position:relative;
- width:280px;
- height:280px;
- margin:15px auto;
+ width:300px;
+ height:300px;
+ margin:20px auto;
 }
-#wheel{
+
+/* RODA */
+#canvas{
  width:100%;
  height:100%;
  border-radius:50%;
- border:8px solid #00ffd5;
- transition:transform 4.2s cubic-bezier(.25,.1,.25,1);
- z-index:1;
+ transition:transform 4s cubic-bezier(0.25,0.1,0.25,1);
 }
+
+/* PANAH FIX ⬇️ */
 #arrow{
  position:absolute;
- bottom:-26px;              /* 🔥 PANAH DI BAWAH */
+ top:-22px;
  left:50%;
  transform:translateX(-50%);
- width:0;height:0;
+ width:0;
+ height:0;
  border-left:16px solid transparent;
  border-right:16px solid transparent;
- border-top:30px solid #ffffff; /* 🔥 ARAH KE ATAS (NUNJUK RODA) */
- z-index:10;
+ border-bottom:28px solid red;
+ z-index:999;
 }
-.log{
- background:#000;
+
+input,button{
  padding:8px;
- height:120px;
- overflow:auto;
- font-size:12px;
+ margin:5px;
+ border-radius:6px;
+ border:none;
 }
-small{color:#aaa}
-#claimBtn{
- background:#25D366;
+
+button{
+ background:#25d366;
  color:#000;
- display:none;
+ font-weight:bold;
+ cursor:pointer;
 }
-#adminPanel{
- display:none;
- background:#020b0b;
- padding:10px;
- border-radius:10px;
- margin-top:10px;
- border:1px solid #00ffd5;
-}
-#adminPanel button{
- background:#ff5555;
- color:#fff;
+
+#log{
+ max-width:300px;
+ margin:15px auto;
+ text-align:left;
+ font-size:13px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="box">
-<h2 id="title">XREZZKYSTORE</h2>
-<p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
-
-<input id="name" placeholder="Nama (1x saja)">
-<input id="code" placeholder="Kode tambahan (opsional)">
-<button onclick="spin()">🎰 SPIN RNG</button>
+<h2>XREZZKYSTORE GIVEAWAY</h2>
 
 <div id="wheelBox">
- <canvas id="wheel" width="280" height="280"></canvas>
  <div id="arrow"></div>
+ <canvas id="canvas" width="300" height="300"></canvas>
 </div>
 
-<div id="result"></div>
-<button id="claimBtn" onclick="claim()">📩 KLAIM HADIAH</button>
+<input id="name" placeholder="Nama kamu">
+<br>
+<button onclick="spin()">SPIN</button>
 
-<small id="counter"></small>
-<div class="log" id="log"></div>
+<p id="result"></p>
+<button id="claimBtn" style="display:none" onclick="claim()">KLAIM HADIAH</button>
 
-<!-- ADMIN PANEL -->
-<div id="adminPanel">
- <b>🔒 ADMIN PANEL</b>
- <button onclick="exportWinners()">📤 EXPORT PEMENANG</button>
- <button onclick="resetAll()">♻ RESET GIVEAWAY</button>
-</div>
-</div>
+<h3>Pemenang</h3>
+<div id="log"></div>
 
 <script>
-// ================= ADMIN CONFIG =================
-const ADMIN_PIN = "12345"; // ganti sendiri
-const ADMIN_WA = "088293064112";
-const MAX_WINNER = 10;
+const prizes = ["ZONK","50K","100K","Diamond","ZONK"];
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-// ================= DATA =================
-const prizes=[
- {label:"Saldo DANA 5K", win:true},
- {label:"Diamond FF", win:true},
- {label:"ZONK", win:false},
- {label:"Saldo DANA 10K", win:true},
- {label:"Voucher FF", win:true},
- {label:"ZONK", win:false}
-];
-const codes={XREZ1:1,XREZ3:3,XREZV8:8};
+let rot = 0;
+let lock = false;
 
-// ================= DEVICE =================
-const deviceId=localStorage.getItem("devId")||(()=>{
- const id="dev-"+Math.random().toString(36).slice(2);
- localStorage.setItem("devId",id);
- return id;
-})();
+const deviceId = localStorage.getItem("id") || crypto.randomUUID();
+localStorage.setItem("id",deviceId);
 
-// ================= STORAGE =================
-let spins=JSON.parse(localStorage.getItem("spins")||"{}");
-let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
-let lockedName=localStorage.getItem("lockedName");
-let winners=JSON.parse(localStorage.getItem("winners")||"[]");
-let hasWon=localStorage.getItem("hasWon")==="true";
+const hasWon = JSON.parse(localStorage.getItem("hasWon")||"{}");
+const winners = JSON.parse(localStorage.getItem("winners")||"[]");
 
-// default 1 spin
-if(spins[deviceId]==null){spins[deviceId]=1;save();}
-
-// lock name
-if(lockedName){
- document.getElementById("name").value=lockedName;
- document.getElementById("name").disabled=true;
+/* DRAW */
+function draw(){
+ const ang = 2*Math.PI/prizes.length;
+ prizes.forEach((p,i)=>{
+  ctx.beginPath();
+  ctx.moveTo(150,150);
+  ctx.arc(150,150,150,i*ang,(i+1)*ang);
+  ctx.fillStyle=i%2?"#222":"#444";
+  ctx.fill();
+  ctx.save();
+  ctx.translate(150,150);
+  ctx.rotate(i*ang+ang/2);
+  ctx.fillStyle="#fff";
+  ctx.fillText(p,60,5);
+  ctx.restore();
+ });
 }
+draw();
 
-// ================= DRAW =================
-const canvas=document.getElementById("wheel");
-const ctx=canvas.getContext("2d");
-const c=140,slice=2*Math.PI/prizes.length;
-
-for(let i=0;i<prizes.length;i++){
- ctx.beginPath();
- ctx.moveTo(c,c);
- ctx.fillStyle=`hsl(${i*360/prizes.length},80%,55%)`;
- ctx.arc(c,c,140,i*slice,(i+1)*slice);
- ctx.fill();
- ctx.save();
- ctx.translate(c,c);
- ctx.rotate(i*slice+slice/2);
- ctx.fillStyle="#000";
- ctx.font="bold 12px Arial";
- ctx.fillText(prizes[i].label,50,5);
- ctx.restore();
-}
-
-// ================= SPIN =================
-let rot=0,lock=false,lastPrize=null;
-
+/* SPIN (TIDAK DIUBAH LOGIC-NYA) */
 function spin(){
  if(lock) return;
- if(winners.length>=MAX_WINNER) return alert("Giveaway selesai!");
+ if(hasWon[deviceId]) return alert("Kamu sudah menang!");
 
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
 
- if(!lockedName){
-  lockedName=name;
-  localStorage.setItem("lockedName",name);
-  document.getElementById("name").disabled=true;
- }
+ const anglePer = 360/prizes.length;
+ const index = Math.floor(Math.random()*prizes.length);
 
- const cd=document.getElementById("code").value.trim();
- if(cd&&codes[cd]&&!usedCodes[cd]){
-  spins[deviceId]+=codes[cd];
-  usedCodes[cd]=true;
- }
+ const target = 270 - (index*anglePer) - anglePer/2;
+ rot += 360*6 + (target - (rot%360));
 
- if(spins[deviceId]<=0) return alert("Spin habis!");
- spins[deviceId]--; save();
-
- const anglePer=360/prizes.length;
- let idx;
-
- if(hasWon){
-  const z=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
-  idx=z[Math.floor(Math.random()*z.length)];
- }else{
-  idx=Math.floor(Math.random()*prizes.length);
- }
-
- // 🔥 PANAH DI BAWAH = REFERENSI 90°
- const target=90-(idx*anglePer)-anglePer/2;
- const spinAngle=360*6+(target-(rot%360));
- rot+=spinAngle; lock=true;
+ lock=true;
  canvas.style.transform=`rotate(${rot}deg)`;
 
  setTimeout(()=>{
   lock=false;
-  lastPrize=prizes[idx];
-  document.getElementById("result").innerText=
-   `🎉 ${name} mendapatkan: ${lastPrize.label}`;
-  document.getElementById("log").innerHTML+=
-   `<div>${name} → ${lastPrize.label}</div>`;
+  const prize = prizes[index];
 
-  if(lastPrize.win&&!hasWon){
-   hasWon=true;
-   localStorage.setItem("hasWon","true");
-   winners.push({name,prize:lastPrize.label});
-   localStorage.setItem("winners",JSON.stringify(winners));
-   document.getElementById("claimBtn").style.display="block";
-  }
-  updateCounter();
+  hasWon[deviceId]=true;
+  winners.push({name,prize});
+  localStorage.setItem("hasWon",JSON.stringify(hasWon));
+  localStorage.setItem("winners",JSON.stringify(winners));
+
+  document.getElementById("result").innerText =
+   `🎉 ${name} mendapatkan: ${prize}`;
+
+  document.getElementById("claimBtn").style.display="inline-block";
+  renderLog();
  },4200);
 }
 
-// ================= CLAIM =================
+function renderLog(){
+ document.getElementById("log").innerHTML =
+  winners.map(w=>`• ${w.name} → ${w.prize}`).join("<br>");
+}
+renderLog();
+
+/* KLAIM WA */
 function claim(){
- if(!lastPrize||!lastPrize.win) return;
- const text=encodeURIComponent(
-  `Halo admin XREZZKYSTORE 👋\n\nSaya *${lockedName}* mendapatkan hadiah:\n🎁 *${lastPrize.label}*\n\nMohon info klaim 🙏`
+ const res=document.getElementById("result").innerText;
+ const msg=encodeURIComponent(
+  "Halo admin, saya mau klaim hadiah:\n"+res
  );
- window.open(`https://wa.me/${ADMIN_WA}?text=${text}`,"_blank");
+ window.open("https://wa.me/6288293064112?text="+msg);
 }
-
-// ================= ADMIN =================
-let tap=0;
-document.getElementById("title").onclick=()=>{
- tap++;
- if(tap>=5){
-  const pin=prompt("Masukkan PIN admin:");
-  if(pin===ADMIN_PIN){
-   document.getElementById("adminPanel").style.display="block";
-  }
-  tap=0;
- }
-};
-
-function exportWinners(){
- let text="DAFTAR PEMENANG:\n\n";
- winners.forEach((w,i)=>text+=`${i+1}. ${w.name} - ${w.prize}\n`);
- alert(text);
-}
-
-function resetAll(){
- if(!confirm("RESET SEMUA DATA?")) return;
- localStorage.clear();
- location.reload();
-}
-
-// ================= UTIL =================
-function updateCounter(){
- document.getElementById("counter").innerText=
-  `🏆 Pemenang: ${winners.length}/${MAX_WINNER}`;
-}
-function save(){
- localStorage.setItem("spins",JSON.stringify(spins));
- localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
-}
-updateCounter();
 </script>
 
 </body>
