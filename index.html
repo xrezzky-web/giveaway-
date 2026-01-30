@@ -2,19 +2,19 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>XREZZKYSTORE RNG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XREZZKYSTORE RNG GIVEAWAY</title>
 
 <style>
 body{
  margin:0;
  background:radial-gradient(circle,#1f6f6f,#020b0b);
- font-family:Arial;
+ font-family:Arial,Helvetica,sans-serif;
  color:#fff;
 }
 .box{
  width:360px;
- margin:40px auto;
+ margin:30px auto;
  background:#071414;
  border-radius:18px;
  padding:15px;
@@ -28,7 +28,11 @@ input,button{
  border-radius:8px;
  border:none;
 }
-button{background:#00ffd5;font-weight:bold}
+button{
+ background:#00ffd5;
+ font-weight:bold;
+ cursor:pointer;
+}
 #wheelBox{
  position:relative;
  width:280px;
@@ -40,17 +44,17 @@ button{background:#00ffd5;font-weight:bold}
  height:100%;
  border-radius:50%;
  border:8px solid #00ffd5;
- transition:transform 4s cubic-bezier(0.25,0.1,0.25,1);
+ transition:transform 4.2s cubic-bezier(.25,.1,.25,1);
 }
 #arrow{
  position:absolute;
- top:-12px;
+ top:-14px;
  left:50%;
  transform:translateX(-50%);
  width:0;height:0;
- border-left:12px solid transparent;
- border-right:12px solid transparent;
- border-bottom:22px solid white;
+ border-left:14px solid transparent;
+ border-right:14px solid transparent;
+ border-bottom:26px solid white;
 }
 .log{
  background:#000;
@@ -59,6 +63,7 @@ button{background:#00ffd5;font-weight:bold}
  overflow:auto;
  font-size:12px;
 }
+small{color:#aaa}
 </style>
 </head>
 
@@ -78,104 +83,154 @@ button{background:#00ffd5;font-weight:bold}
 </div>
 
 <div id="result"></div>
+<small id="counter"></small>
 <div class="log" id="log"></div>
 </div>
 
 <script>
-// ===== HADIAH =====
-const prizes=[
- "Saldo DANA 5K",
- "Diamond FF",
- "ZONK",
- "Saldo DANA 10K",
- "Voucher FF",
- "ZONK"
+// ================= CONFIG =================
+const MAX_WINNER = 10;
+
+const prizes = [
+ {label:"Saldo DANA 5K", win:true},
+ {label:"Diamond FF", win:true},
+ {label:"ZONK", win:false},
+ {label:"Saldo DANA 10K", win:true},
+ {label:"Voucher FF", win:true},
+ {label:"ZONK", win:false}
 ];
 
-// ===== CODE =====
-const codes={
- "XREZ1":1,
- "XREZ3":3
+const codes = {
+ "XREZ1": 1,
+ "XREZ3": 3
 };
 
-// ===== DEVICE ID =====
-const deviceId=localStorage.getItem("devId")||(()=>{
- const id="dev-"+Math.random().toString(36).slice(2);
- localStorage.setItem("devId",id);
+// ================= DEVICE =================
+const deviceId = localStorage.getItem("devId") || (() => {
+ const id = "dev-" + Math.random().toString(36).slice(2);
+ localStorage.setItem("devId", id);
  return id;
 })();
 
-// ===== SPIN DATA =====
-let spins=JSON.parse(localStorage.getItem("spins")||"{}");
-let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
+// ================= STORAGE =================
+let spins = JSON.parse(localStorage.getItem("spins") || "{}");
+let usedCodes = JSON.parse(localStorage.getItem("usedCodes") || "{}");
+let lockedName = localStorage.getItem("lockedName");
+let winners = JSON.parse(localStorage.getItem("winners") || "[]");
 
-// DEFAULT 1 SPIN GRATIS
-if(spins[deviceId]==null){
- spins[deviceId]=1;
- localStorage.setItem("spins",JSON.stringify(spins));
+// default 1 spin gratis
+if(spins[deviceId] == null){
+ spins[deviceId] = 1;
+ save();
 }
 
-// ===== DRAW WHEEL =====
-const canvas=document.getElementById("wheel");
-const ctx=canvas.getContext("2d");
-const center=140;
-const slice=2*Math.PI/prizes.length;
+// kunci nama
+if(lockedName){
+ document.getElementById("name").value = lockedName;
+ document.getElementById("name").disabled = true;
+}
 
-function draw(){
+// ================= DRAW WHEEL =================
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const center = 140;
+const slice = 2*Math.PI/prizes.length;
+
+function drawWheel(){
  for(let i=0;i<prizes.length;i++){
   ctx.beginPath();
   ctx.moveTo(center,center);
-  ctx.fillStyle=`hsl(${i*360/prizes.length},80%,55%)`;
+  ctx.fillStyle = `hsl(${i*360/prizes.length},80%,55%)`;
   ctx.arc(center,center,140,i*slice,(i+1)*slice);
   ctx.fill();
+
   ctx.save();
   ctx.translate(center,center);
-  ctx.rotate(i*slice+slice/2);
+  ctx.rotate(i*slice + slice/2);
   ctx.fillStyle="#000";
   ctx.font="bold 12px Arial";
-  ctx.fillText(prizes[i],50,5);
+  ctx.fillText(prizes[i].label,50,5);
   ctx.restore();
  }
 }
-draw();
+drawWheel();
 
-// ===== SPIN =====
-let rot=0,lock=false;
+// ================= SPIN =================
+let rot = 0;
+let lock = false;
 
 function spin(){
  if(lock) return;
- const name=document.getElementById("name").value.trim();
- if(!name) return alert("Isi nama!");
 
- // tambah spin dari code
- const c=document.getElementById("code").value.trim();
- if(c && codes[c] && !usedCodes[c]){
-  spins[deviceId]+=codes[c];
-  usedCodes[c]=true;
+ if(winners.length >= MAX_WINNER){
+  alert("Giveaway sudah selesai!");
+  return;
  }
 
- if(spins[deviceId]<=0) return alert("Spin habis!");
+ const nameInput = document.getElementById("name");
+ const name = nameInput.value.trim();
+ if(!name) return alert("Isi nama!");
+
+ if(!lockedName){
+  lockedName = name;
+  localStorage.setItem("lockedName", name);
+  nameInput.disabled = true;
+ }
+
+ // tambah spin dari code
+ const c = document.getElementById("code").value.trim();
+ if(c && codes[c] && !usedCodes[c]){
+  spins[deviceId] += codes[c];
+  usedCodes[c] = true;
+ }
+
+ if(spins[deviceId] <= 0){
+  alert("Spin habis!");
+  return;
+ }
 
  spins[deviceId]--;
- localStorage.setItem("spins",JSON.stringify(spins));
- localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
+ save();
 
- // RNG FINAL (1 sumber kebenaran)
- const finalIndex=Math.floor(Math.random()*prizes.length);
- const anglePer=360/prizes.length;
- const target=anglePer*finalIndex;
- const spinAngle=360*5+(360-target)-(rot%360);
+ const anglePer = 360 / prizes.length;
+ const finalIndex = Math.floor(Math.random() * prizes.length);
 
- rot+=spinAngle;
- lock=true;
- canvas.style.transform=`rotate(${rot}deg)`;
+ // 🔥 RUMUS FINAL (PANAH ATAS)
+ const targetAngle = 270 - (finalIndex * anglePer) - anglePer/2;
+ const spinAngle = 360*6 + (targetAngle - (rot % 360));
+
+ rot += spinAngle;
+ lock = true;
+ canvas.style.transform = `rotate(${rot}deg)`;
 
  setTimeout(()=>{
-  lock=false;
-  const prize=prizes[finalIndex];
-  document.getElementById("result").innerText=`🎉 ${name} mendapatkan: ${prize}`;
-  document.getElementById("log").innerHTML+=`<div>${name} → ${prize}</div>`;
+  lock = false;
+  const prize = prizes[finalIndex];
+
+  document.getElementById("result").innerText =
+   `🎉 ${name} mendapatkan: ${prize.label}`;
+
+  document.getElementById("log").innerHTML +=
+   `<div>${name} → ${prize.label}</div>`;
+
+  if(prize.win){
+   winners.push({name, prize:prize.label});
+   localStorage.setItem("winners", JSON.stringify(winners));
+  }
+
+  updateCounter();
  },4200);
+}
+
+function updateCounter(){
+ document.getElementById("counter").innerText =
+  `🏆 Pemenang: ${winners.length}/${MAX_WINNER}`;
+}
+updateCounter();
+
+function save(){
+ localStorage.setItem("spins", JSON.stringify(spins));
+ localStorage.setItem("usedCodes", JSON.stringify(usedCodes));
 }
 </script>
 
