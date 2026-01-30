@@ -16,7 +16,6 @@ body{
  width:300px;
  height:300px;
  margin:20px auto;
- overflow:visible; /* 🔥 FIX UTAMA */
 }
 
 /* RODA */
@@ -27,18 +26,16 @@ body{
  transition:transform 4s cubic-bezier(0.25,0.1,0.25,1);
 }
 
-/* PANAH ⬇️ */
+/* PANAH SVG ⬇️ (ANTI KETIBAN) */
 #arrow{
  position:absolute;
- top:-5px;              /* 🔥 JANGAN TERLALU KE ATAS */
+ top:-10px;
  left:50%;
  transform:translateX(-50%);
- width:0;
- height:0;
- border-left:16px solid transparent;
- border-right:16px solid transparent;
- border-bottom:28px solid #ff3b3b;
- z-index:9999;          /* 🔥 DI ATAS SEMUANYA */
+ width:40px;
+ height:40px;
+ z-index:99999;
+ pointer-events:none;
 }
 
 input,button{
@@ -69,7 +66,12 @@ button{
 <h2>XREZZKYSTORE GIVEAWAY</h2>
 
 <div id="wheelBox">
- <div id="arrow"></div>
+
+ <!-- PANAH SVG -->
+ <svg id="arrow" viewBox="0 0 100 100">
+  <polygon points="50,90 10,20 90,20" fill="#ff2e2e"/>
+ </svg>
+
  <canvas id="canvas" width="300" height="300"></canvas>
 </div>
 
@@ -116,7 +118,7 @@ function draw(){
 }
 draw();
 
-/* SPIN (TIDAK DIUBAH) */
+/* SPIN (LOGIC ASLI, AMAN) */
 function spin(){
  if(lock) return;
  if(hasWon[deviceId]) return alert("Kamu sudah menang!");
