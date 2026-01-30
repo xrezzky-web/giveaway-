@@ -25,12 +25,7 @@ border-radius:16px;
 box-shadow:0 0 30px rgba(0,255,255,.25)
 }
 h1{text-align:center;color:#00ffff;margin:0}
-.subtitle{
-text-align:center;
-font-size:13px;
-opacity:.8;
-margin-bottom:12px
-}
+.subtitle{text-align:center;font-size:13px;opacity:.8;margin-bottom:12px}
 input,button{
 width:100%;
 padding:12px;
@@ -127,29 +122,36 @@ margin-top:10px
 </div>
 
 <script>
-const ADMIN_PIN = "1234";
+// ================= CONFIG =================
+const ADMIN_PIN = "1234";      // ganti pin admin
 const MAX_WINNERS = 10;
+const WIN_CHANCE = 0.25;       // 25% peluang MENANG
 
+// CODE TAMBAHAN (1x pakai per code)
 const CODES = {
-  "XREZZKY1": 1,
-  "VIPXREZ": 2,
-  "GODMODE": 5
+  "XREZZKY1": 1,   // +1 spin
+  "VIPXREZ": 2,    // +2 spin
+  "GODMODE": 5    // +5 spin
 };
+// ========================================
 
-let winners = JSON.parse(localStorage.getItem("xrezzky_winners")) || [];
-let spins   = JSON.parse(localStorage.getItem("xrezzky_spins")) || {};
+// STORAGE
+let winners   = JSON.parse(localStorage.getItem("xrezzky_winners")) || [];
+let spins     = JSON.parse(localStorage.getItem("xrezzky_spins")) || {};
 let usedCodes = JSON.parse(localStorage.getItem("xrezzky_used_codes")) || [];
 
 const list = document.getElementById("winnerList");
 const count = document.getElementById("count");
 const spinBtn = document.getElementById("spinBtn");
 
+// SAVE
 function save(){
 localStorage.setItem("xrezzky_winners",JSON.stringify(winners));
 localStorage.setItem("xrezzky_spins",JSON.stringify(spins));
 localStorage.setItem("xrezzky_used_codes",JSON.stringify(usedCodes));
 }
 
+// RENDER
 function render(){
 list.innerHTML="";
 winners.forEach((w,i)=>{
@@ -165,30 +167,42 @@ document.getElementById("result").innerText="🎉 Giveaway selesai";
 }
 render();
 
+// GET NAME
 function getName(){
 return document.getElementById("nameInput").value.trim();
 }
 
+// SPIN RNG (FIXED – ADA ZONK)
 function spin(){
-const name=getName();
+const name = getName();
 if(!name) return alert("Isi nama dulu!");
 if(winners.includes(name)) return alert("Nama ini sudah menang!");
-if(winners.length>=MAX_WINNERS) return;
+if(winners.length >= MAX_WINNERS) return;
 
+// default 1 spin
 spins[name] = spins[name] ?? 1;
 
 if(spins[name] <= 0) return alert("Spin kamu habis!");
 
 document.getElementById("result").innerText="🎲 Mengundi...";
+
 setTimeout(()=>{
 spins[name]--;
-winners.push(name);
+
+const roll = Math.random(); // 0 - 1
+if(roll <= WIN_CHANCE){
+  winners.push(name);
+  document.getElementById("result").innerText="🏆 PEMENANG: "+name;
+}else{
+  document.getElementById("result").innerText="❌ ZONK! Coba lagi";
+}
+
 save();
 render();
-document.getElementById("result").innerText="🏆 PEMENANG: "+name;
 },1200);
 }
 
+// USE CODE
 function useCode(){
 const name=getName();
 const code=document.getElementById("codeInput").value.trim().toUpperCase();
@@ -196,7 +210,7 @@ if(!name) return alert("Isi nama dulu!");
 if(!CODES[code]) return alert("Kode tidak valid!");
 if(usedCodes.includes(code)) return alert("Kode sudah dipakai!");
 
-spins[name] = (spins[name] || 0) + CODES[code];
+spins[name]=(spins[name]||0)+CODES[code];
 usedCodes.push(code);
 save();
 
@@ -204,8 +218,9 @@ alert(`Kode berhasil! +${CODES[code]} spin`);
 document.getElementById("codeInput").value="";
 }
 
+// RESET
 function resetAll(){
-if(document.getElementById("pinInput").value !== ADMIN_PIN)
+if(document.getElementById("pinInput").value!==ADMIN_PIN)
 return alert("PIN SALAH!");
 if(!confirm("Reset semua data giveaway?")) return;
 
@@ -218,6 +233,7 @@ document.getElementById("result").innerText="Giveaway direset";
 render();
 }
 
+// EXPORT
 function exportWinners(){
 if(!winners.length) return alert("Belum ada pemenang!");
 let text="DAFTAR PEMENANG XREZZKYSTORE\n\n";
@@ -230,4 +246,4 @@ a.click();
 }
 </script>
 </body>
-</html># giveaway-
+</html>
