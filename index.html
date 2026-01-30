@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XREZZKYSTORE RNG GIVEAWAY</title>
+
+<style>
+*{box-sizing:border-box;font-family:Segoe UI,sans-serif}
+body{
+margin:0;
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+color:#fff;
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center
+}
+.container{
+background:rgba(0,0,0,.65);
+padding:22px;
+width:100%;
+max-width:420px;
+border-radius:16px;
+box-shadow:0 0 30px rgba(0,255,255,.25)
+}
+h1{text-align:center;color:#00ffff;margin:0}
+.subtitle{
+text-align:center;
+font-size:13px;
+opacity:.8;
+margin-bottom:12px
+}
+input,button{
+width:100%;
+padding:12px;
+border-radius:8px;
+border:none;
+font-size:14px;
+margin-bottom:8px
+}
+input{outline:none}
+button{
+background:#00ffff;
+font-weight:bold;
+cursor:pointer;
+color:#000
+}
+button:disabled{
+background:#777;
+cursor:not-allowed
+}
+.result{
+text-align:center;
+font-size:18px;
+font-weight:bold;
+color:#00ff9d;
+margin:10px 0
+}
+.list h3{
+font-size:15px;
+color:#00ffff;
+margin:8px 0
+}
+ul{
+list-style:none;
+padding:0;
+margin:0;
+max-height:160px;
+overflow:auto
+}
+li{
+background:rgba(255,255,255,.08);
+padding:8px;
+border-radius:6px;
+margin-bottom:5px;
+font-size:13px
+}
+.admin{
+margin-top:10px;
+padding-top:10px;
+border-top:1px solid rgba(255,255,255,.2)
+}
+.admin button{
+background:#ff5555;
+color:#fff
+}
+.export{
+background:#00ff9d;
+color:#000
+}
+.footer{
+text-align:center;
+font-size:11px;
+opacity:.6;
+margin-top:10px
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+<h1>XREZZKYSTORE</h1>
+<div class="subtitle">RNG GIVEAWAY SYSTEM</div>
+
+<input id="nameInput" placeholder="Nama peserta">
+
+<input id="codeInput" placeholder="Kode tambahan (opsional)">
+<button onclick="useCode()">➕ GUNAKAN CODE</button>
+
+<button id="spinBtn" onclick="spin()">🎰 SPIN RNG</button>
+
+<div class="result" id="result"></div>
+
+<div class="list">
+<h3>Pemenang (<span id="count">0</span>/10)</h3>
+<ul id="winnerList"></ul>
+</div>
+
+<div class="admin">
+<input id="pinInput" placeholder="Admin PIN">
+<button onclick="resetAll()">🔒 RESET GIVEAWAY</button>
+<button class="export" onclick="exportWinners()">📤 EXPORT PEMENANG</button>
+</div>
+
+<div class="footer">© XREZZKYSTORE OFFICIAL</div>
+</div>
+
+<script>
+const ADMIN_PIN = "1234";
+const MAX_WINNERS = 10;
+
+const CODES = {
+  "XREZZKY1": 1,
+  "VIPXREZ": 2,
+  "GODMODE": 5
+};
+
+let winners = JSON.parse(localStorage.getItem("xrezzky_winners")) || [];
+let spins   = JSON.parse(localStorage.getItem("xrezzky_spins")) || {};
+let usedCodes = JSON.parse(localStorage.getItem("xrezzky_used_codes")) || [];
+
+const list = document.getElementById("winnerList");
+const count = document.getElementById("count");
+const spinBtn = document.getElementById("spinBtn");
+
+function save(){
+localStorage.setItem("xrezzky_winners",JSON.stringify(winners));
+localStorage.setItem("xrezzky_spins",JSON.stringify(spins));
+localStorage.setItem("xrezzky_used_codes",JSON.stringify(usedCodes));
+}
+
+function render(){
+list.innerHTML="";
+winners.forEach((w,i)=>{
+const li=document.createElement("li");
+li.textContent=`${i+1}. ${w}`;
+list.appendChild(li);
+});
+count.textContent=winners.length;
+if(winners.length>=MAX_WINNERS){
+spinBtn.disabled=true;
+document.getElementById("result").innerText="🎉 Giveaway selesai";
+}
+}
+render();
+
+function getName(){
+return document.getElementById("nameInput").value.trim();
+}
+
+function spin(){
+const name=getName();
+if(!name) return alert("Isi nama dulu!");
+if(winners.includes(name)) return alert("Nama ini sudah menang!");
+if(winners.length>=MAX_WINNERS) return;
+
+spins[name] = spins[name] ?? 1;
+
+if(spins[name] <= 0) return alert("Spin kamu habis!");
+
+document.getElementById("result").innerText="🎲 Mengundi...";
+setTimeout(()=>{
+spins[name]--;
+winners.push(name);
+save();
+render();
+document.getElementById("result").innerText="🏆 PEMENANG: "+name;
+},1200);
+}
+
+function useCode(){
+const name=getName();
+const code=document.getElementById("codeInput").value.trim().toUpperCase();
+if(!name) return alert("Isi nama dulu!");
+if(!CODES[code]) return alert("Kode tidak valid!");
+if(usedCodes.includes(code)) return alert("Kode sudah dipakai!");
+
+spins[name] = (spins[name] || 0) + CODES[code];
+usedCodes.push(code);
+save();
+
+alert(`Kode berhasil! +${CODES[code]} spin`);
+document.getElementById("codeInput").value="";
+}
+
+function resetAll(){
+if(document.getElementById("pinInput").value !== ADMIN_PIN)
+return alert("PIN SALAH!");
+if(!confirm("Reset semua data giveaway?")) return;
+
+localStorage.clear();
+winners=[];
+spins={};
+usedCodes=[];
+spinBtn.disabled=false;
+document.getElementById("result").innerText="Giveaway direset";
+render();
+}
+
+function exportWinners(){
+if(!winners.length) return alert("Belum ada pemenang!");
+let text="DAFTAR PEMENANG XREZZKYSTORE\n\n";
+winners.forEach((w,i)=>text+=`${i+1}. ${w}\n`);
+const blob=new Blob([text],{type:"text/plain"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="pemenang_xrezzkystore.txt";
+a.click();
+}
+</script>
+</body>
+</html># giveaway-
