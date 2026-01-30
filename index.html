@@ -152,6 +152,7 @@ let lockedName=localStorage.getItem("lockedName");
 let hasWon=localStorage.getItem("hasWon")==="true";
 let lastPrize=null;
 
+// default 1 spin jika belum ada
 if(spinData[deviceId]==null){ spinData[deviceId]=1; saveData(); }
 if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
@@ -194,23 +195,30 @@ function saveData(){
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
- if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  if(winners.length>=MAX_WINNER) return alert("Giveaway selesai!");
+
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
- if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; }
+ if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
 
- // ✅ Penerapan code per user
+ // ✅ Perbaikan code spin
  const codeInput=document.getElementById("code");
  const code=codeInput.value.trim().toUpperCase();
- if(code && CODES[code] && !usedCodes[deviceId+"_"+code]){
-  spinData[deviceId]+=CODES[code];
-  usedCodes[deviceId+"_"+code]=true;
-  codeInput.value="";
-  saveData();
-  updateInfo();
+ if(code && CODES[code]){
+   const key=deviceId+"_"+code;
+   if(!usedCodes[key]){
+     spinData[deviceId] += CODES[code];
+     usedCodes[key]=true;
+     saveData();
+     updateInfo();
+     codeInput.value="";
+     alert(`✅ Code ${code} berhasil! Spin ditambahkan +${CODES[code]}`);
+   } else {
+     alert(`⚠️ Code ${code} sudah digunakan!`);
+   }
  }
 
+ if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  spinData[deviceId]--;
  saveData();
  updateInfo();
