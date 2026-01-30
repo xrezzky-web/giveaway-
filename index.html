@@ -57,7 +57,6 @@ button{
  border-radius:50%;
  border:8px solid #00ffd5;
  transition: transform 4s cubic-bezier(.25,.1,.25,1);
- background:#071414;
 }
 #arrow{
  position:absolute;
@@ -157,13 +156,13 @@ small{
 <script type="module">
 // ================= FIREBASE =================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-app.js";
-import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-database.js";
+import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-database.js";
 
 // ================= CONFIG =================
 const ADMIN_PIN="12345";
 const ADMIN_WA="6288293064112";
 const MAX_WINNER=10;
-const WIN_CHANCE = 0.15;
+const WIN_CHANCE = 0.15; // bisa ubah untuk RNG susah/mudah
 const prizes=[
  {label:"ZONK",win:false},
  {label:"DANA 5K",win:true},
@@ -204,11 +203,10 @@ const db = getDatabase(app);
 const winnersRef = ref(db, "globalWinners");
 
 // ================= DRAW WHEEL =================
-const canvas=document.getElementById("wheel");      
-const ctx=canvas.getContext("2d");      
-const c=140;      
-const slice=2*Math.PI/prizes.length;      
-
+const canvas=document.getElementById("wheel");
+const ctx=canvas.getContext("2d");
+const c=140;
+const slice=2*Math.PI/prizes.length;
 function drawWheel(){
  ctx.clearRect(0,0,canvas.width,canvas.height);
  for(let i=0;i<prizes.length;i++){
@@ -230,85 +228,84 @@ function drawWheel(){
 drawWheel();
 
 // ================= UTIL =================
-function updateInfo(){      
- document.getElementById("spinInfo").innerText=      
-  `🎟 Spin kamu: ${spinData[deviceId]} | 🏆 Total pemenang: ${winners.length}/${MAX_WINNER}`;      
-}      
-updateInfo();      
-function saveData(){      
- localStorage.setItem("spinData",JSON.stringify(spinData));      
- localStorage.setItem("usedCodes",JSON.stringify(usedCodes));      
- localStorage.setItem("winners",JSON.stringify(winners));      
- localStorage.setItem("hasWon",hasWon?"true":"false");      
- localStorage.setItem("lockedName",lockedName||"");      
-}      
+function updateInfo(){
+ document.getElementById("spinInfo").innerText=
+  `🎟 Spin kamu: ${spinData[deviceId]} | 🏆 Total pemenang: ${winners.length}/${MAX_WINNER}`;
+}
+updateInfo();
+function saveData(){
+ localStorage.setItem("spinData",JSON.stringify(spinData));
+ localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
+ localStorage.setItem("winners",JSON.stringify(winners));
+ localStorage.setItem("hasWon",hasWon?"true":"false");
+ localStorage.setItem("lockedName",lockedName||"");
+}
 
 // ================= SPIN =================
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
- const name=document.getElementById("name").value.trim();      
- if(!name) return alert("Isi nama!");      
+ const name=document.getElementById("name").value.trim();
+ if(!name) return alert("Isi nama!");
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
 
  // APPLY CODE
- const codeInput=document.getElementById("code");      
- const code=codeInput.value.trim().toUpperCase();      
- if(code && CODES[code]){      
-   const key=deviceId+"_"+code;      
-   if(!usedCodes[key]){      
-     spinData[deviceId] += CODES[code];      
-     usedCodes[key]=true;      
-     saveData();      
-     updateInfo();      
-     codeInput.value="";      
-     alert(`✅ Code ${code} berhasil! Spin ditambahkan +${CODES[code]}`);      
-   } else {      
-     alert(`⚠️ Code ${code} sudah digunakan!`);      
-   }      
- }      
+ const codeInput=document.getElementById("code");
+ const code=codeInput.value.trim().toUpperCase();
+ if(code && CODES[code]){
+   const key=deviceId+"_"+code;
+   if(!usedCodes[key]){
+     spinData[deviceId]+=CODES[code];
+     usedCodes[key]=true;
+     saveData();
+     updateInfo();
+     codeInput.value="";
+     alert(`✅ Code ${code} berhasil! Spin ditambahkan +${CODES[code]}`);
+   } else {
+     alert(`⚠️ Code ${code} sudah digunakan!`);
+   }
+ }
 
- if(spinData[deviceId]<=0) return alert("Spin kamu habis!");      
- spinData[deviceId]--;      
- saveData();      
- updateInfo();      
+ if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
+ spinData[deviceId]--;
+ saveData();
+ updateInfo();
 
- // RNG SUSAH
- let idx;      
- const winPrizes = prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);      
- const losePrizes = prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);      
- if(Math.random() < WIN_CHANCE){ idx = winPrizes[Math.floor(Math.random()*winPrizes.length)]; } 
- else { idx = losePrizes[Math.floor(Math.random()*losePrizes.length)]; }      
+ // RNG susah/mudah
+ let idx;
+ const winPrizes = prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
+ const losePrizes = prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
+ idx = (Math.random() < WIN_CHANCE)? winPrizes[Math.floor(Math.random()*winPrizes.length)] : losePrizes[Math.floor(Math.random()*losePrizes.length)];
 
- const anglePer=360/prizes.length;      
- const target=90-(idx*anglePer)-anglePer/2;      
- rot+=360*6+(target-(rot%360));      
- lock=true;      
- canvas.style.transform=`rotate(${rot}deg)`;      
+ const anglePer=360/prizes.length;
+ const target=90-(idx*anglePer)-anglePer/2;
+ rot+=360*6+(target-(rot%360));
+ lock=true;
+ canvas.style.transform=`rotate(${rot}deg)`;
 
  setTimeout(()=>{
-  lock=false;      
-  lastPrize=prizes[idx];      
-  document.getElementById("result").innerText=`🎉 ${lockedName} mendapatkan ${lastPrize.label}`;      
-  document.getElementById("log").innerHTML+=`<div>${lockedName} → ${lastPrize.label}</div>`;      
+  lock=false;
+  lastPrize=prizes[idx];
+  document.getElementById("result").innerText=`🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
+  document.getElementById("log").innerHTML+=`<div>${lockedName} → ${lastPrize.label}</div>`;
   drawWheel();
 
-  // Simpan ke global Firebase
+  // simpan global Firebase
   if(lastPrize.win && !hasWon){
    hasWon=true;
    winners.push({name:lockedName,prize:lastPrize.label});
    const newRef = push(winnersRef);
-   set(newRef, {name: lockedName, prize: lastPrize.label});
+   set(newRef,{name:lockedName,prize:lastPrize.label});
    document.getElementById("claimBtn").style.display="block";
-  }      
-  saveData();      
-  updateInfo();      
- },4200);
+  }
+  saveData();
+  updateInfo();
+},4200);
 });
 
 // ================= GLOBAL WINNERS =================
 const winnerListEl = document.getElementById("winnerList");
-onValue(winnersRef, (snapshot)=>{
+onValue(winnersRef, snapshot=>{
  const data = snapshot.val();
  winnerListEl.innerHTML="";
  if(data){
