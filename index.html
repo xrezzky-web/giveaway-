@@ -229,6 +229,8 @@ small{
  <input id="maxSpinDevice" placeholder="Max Spin Per Device">
  <input id="maxWinDevice" placeholder="Max Hadiah Per Device">
  <input id="maxWinnerGlobal" placeholder="Max Pemenang Global">
+ <!-- NEW: free spin per new user setting -->
+ <input id="freeSpinNewUser" placeholder="Free Spin untuk User Baru (angka)">
  <button id="resetSpinBtn">♻ Reset Spin Semua User</button>
  <button id="restartWinnersBtn">🔄 Reset Pemenang</button>
  <button id="exportBtn">📤 EXPORT PEMENANG</button>
@@ -277,6 +279,8 @@ const ADMIN_WA="6288293064112";
 let MAX_SPIN_PER_USER = 0;
 let MAX_WIN_PER_DEVICE = 2;
 let MAX_WINNER_GLOBAL = 10;
+// Keep the original FREE_SPIN_NEW_USER constant for backward compatibility (default)
+const FREE_SPIN_NEW_USER = 5;
 // prizes array will be kept in sync with firebase wheelItems (each item: {label, win, weight})
 const prizes=[
  {label:"ZONK",win:false, weight:1},
@@ -289,6 +293,10 @@ const prizes=[
 let CODES={};
 let WIN_CHANCE=0.1; // kept for compatibility but weighted selection will determine final pick
 let EVENT_ON = true; // synced with firebase
+
+// This variable will hold admin-configured free spins for new users if set in Firebase.
+// If null, the code will fall back to FREE_SPIN_NEW_USER constant.
+let ADMIN_FREE_SPIN_NEW_USER = null;
 
 // ================= FIREBASE =================
 const firebaseConfig = {
@@ -304,6 +312,48 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 
+// Immediately start listening for settings so we can apply free-spin setting before giving spins
+const settingsRef = db.ref("settings");
+settingsRef.on("value", snap => {
+  const s = snap.val() || {};
+  if(typeof s.eventOn !== "undefined") {
+    EVENT_ON = s.eventOn === true;
+  } else {
+    // ensure key exists
+    db.ref("settings/eventOn").set(true);
+    EVENT_ON = true;
+  }
+  document.getElementById("eventStatus").innerText = EVENT_ON ? "ON" : "OFF";
+  document.getElementById("toggleEventBtn").innerText = EVENT_ON ? "TURN OFF" : "TURN ON";
+
+  if(typeof s.maxWinnerGlobal !== "undefined") {
+    MAX_WINNER_GLOBAL = parseInt(s.maxWinnerGlobal) || MAX_WINNER_GLOBAL;
+    document.getElementById("maxWinnerGlobal").value = MAX_WINNER_GLOBAL;
+  }
+  if(typeof s.maxWinPerDevice !== "undefined") {
+    MAX_WIN_PER_DEVICE = parseInt(s.maxWinPerDevice) || MAX_WIN_PER_DEVICE;
+    document.getElementById("maxWinDevice").value = MAX_WIN_PER_DEVICE;
+  }
+  if(typeof s.maxSpinPerUser !== "undefined") {
+    MAX_SPIN_PER_USER = parseInt(s.maxSpinPerUser) || MAX_SPIN_PER_USER;
+    document.getElementById("maxSpinDevice").value = MAX_SPIN_PER_USER;
+  }
+
+  // NEW: free spin per new user from settings
+  if(typeof s.freeSpinNewUser !== "undefined"){
+    const v = parseInt(s.freeSpinNewUser);
+    ADMIN_FREE_SPIN_NEW_USER = (isNaN(v) ? null : v);
+    // set admin input if present
+    const el = document.getElementById("freeSpinNewUser");
+    if(el) el.value = ADMIN_FREE_SPIN_NEW_USER !== null ? String(ADMIN_FREE_SPIN_NEW_USER) : "";
+  } else {
+    // not set in DB
+    ADMIN_FREE_SPIN_NEW_USER = null;
+    const el = document.getElementById("freeSpinNewUser");
+    if(el) el.value = "";
+  }
+});
+
 // ================= STORAGE =================
 const deviceId=localStorage.getItem("devId") || (()=>{ 
  const id="dev-"+Math.random().toString(36).slice(2);
@@ -318,13 +368,31 @@ let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
 let lastPrize=null;
 
 // FREE SPIN USER BARU
-const FREE_SPIN_NEW_USER = 5;
+// Use admin-configured value if available, otherwise fallback to original constant.
+const effectiveFreeSpin = (typeof ADMIN_FREE_SPIN_NEW_USER === "number" && ADMIN_FREE_SPIN_NEW_USER !== null) ? ADMIN_FREE_SPIN_NEW_USER : FREE_SPIN_NEW_USER;
 if(!spinData[deviceId]) spinData[deviceId]=0;
 if(!localStorage.getItem("claimedFree")){
- spinData[deviceId]+=FREE_SPIN_NEW_USER;
+ // When the settingsRef event hasn't fired yet, ADMIN_FREE_SPIN_NEW_USER may be null.
+ // To make sure admin setting is applied for future page loads, we check ADMIN_FREE_SPIN_NEW_USER again on settings update.
+ const give = (ADMIN_FREE_SPIN_NEW_USER !== null && typeof ADMIN_FREE_SPIN_NEW_USER === "number") ? ADMIN_FREE_SPIN_NEW_USER : FREE_SPIN_NEW_USER;
+ spinData[deviceId]+=give;
  localStorage.setItem("claimedFree","yes");
 }
 if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
+
+// If settings later change freeSpinNewUser and the user hasn't claimed yet, ensure they receive the updated amount.
+// (This covers the rare case where settings loaded after initial allocation.)
+settingsRef.once("value").then(snap=>{
+  const s = snap.val() || {};
+  const adminVal = (typeof s.freeSpinNewUser !== "undefined") ? parseInt(s.freeSpinNewUser) : null;
+  if(!localStorage.getItem("claimedFree")){
+    const give = (adminVal !== null && !isNaN(adminVal)) ? adminVal : FREE_SPIN_NEW_USER;
+    spinData[deviceId] = (spinData[deviceId]||0) + give;
+    localStorage.setItem("claimedFree","yes");
+    saveData();
+    updateInfo();
+  }
+});
 
 // LOAD CODES DARI FIREBASE
 db.ref("codes").on("value", snapshot=>{
@@ -445,11 +513,9 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
       if(idx === null) idx = 0;
     } else {
       // EVENT ON and within limits -> pick weighted among ALL prizes
-      // Weighted selection respects admin-set weights for each slice
       const allIndices = prizes.map((_,i)=>i);
       idx = weightedPickIndex(allIndices);
       if(idx === null){
-        // fallback to uniform selection
         idx = Math.floor(Math.random()*prizes.length);
       }
       // Double-check: if idx is winning but limits reached, fallback to lose pick
@@ -563,6 +629,18 @@ document.getElementById("maxSpinDevice").addEventListener("change",()=>{const v=
 document.getElementById("maxWinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinDevice").value)||0; MAX_WIN_PER_DEVICE=v; db.ref("settings/maxWinPerDevice").set(v); alert(`Max hadiah per device diubah menjadi ${v}`);});
 document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0; MAX_WINNER_GLOBAL=v; db.ref("settings/maxWinnerGlobal").set(v); alert(`Max pemenang global diubah menjadi ${v}`);});
 
+// NEW: update free spin setting in firebase when admin changes input
+document.getElementById("freeSpinNewUser").addEventListener("change", ()=>{
+  const v = parseInt(document.getElementById("freeSpinNewUser").value);
+  if(isNaN(v) || v < 0){
+    alert("Masukkan angka valid untuk free spin.");
+    return;
+  }
+  db.ref("settings/freeSpinNewUser").set(v);
+  ADMIN_FREE_SPIN_NEW_USER = v;
+  alert(`Free spin untuk user baru diubah menjadi ${v}`);
+});
+
 document.getElementById("resetSpinBtn").addEventListener("click",()=>{if(confirm("Reset spin semua user?")){localStorage.clear();location.reload();}});
 document.getElementById("restartWinnersBtn").addEventListener("click",()=>{if(confirm("Reset data pemenang?")){db.ref("winners").set([]); db.ref("deviceWins").set({});}});
 document.getElementById("exportBtn").addEventListener("click",()=>{
@@ -605,61 +683,6 @@ document.getElementById("copyExportBtn").addEventListener("click", ()=>{
 });
 document.getElementById("closeExportBtn").addEventListener("click", ()=>{
   document.getElementById("exportModal").style.display = "none";
-});
-
-// ================= NEW ADMIN FEATURES IMPLEMENTATION =================
-
-// -- Sync settings from Firebase (realtime) --
-const settingsRef = db.ref("settings");
-settingsRef.on("value", snap => {
-  const s = snap.val() || {};
-  if(typeof s.eventOn !== "undefined") {
-    EVENT_ON = s.eventOn === true;
-  } else {
-    EVENT_ON = true;
-    db.ref("settings/eventOn").set(true);
-  }
-  document.getElementById("eventStatus").innerText = EVENT_ON ? "ON" : "OFF";
-  document.getElementById("toggleEventBtn").innerText = EVENT_ON ? "TURN OFF" : "TURN ON";
-
-  if(typeof s.maxWinnerGlobal !== "undefined") {
-    MAX_WINNER_GLOBAL = parseInt(s.maxWinnerGlobal) || MAX_WINNER_GLOBAL;
-    document.getElementById("maxWinnerGlobal").value = MAX_WINNER_GLOBAL;
-  }
-  if(typeof s.maxWinPerDevice !== "undefined") {
-    MAX_WIN_PER_DEVICE = parseInt(s.maxWinPerDevice) || MAX_WIN_PER_DEVICE;
-    document.getElementById("maxWinDevice").value = MAX_WIN_PER_DEVICE;
-  }
-  if(typeof s.maxSpinPerUser !== "undefined") {
-    MAX_SPIN_PER_USER = parseInt(s.maxSpinPerUser) || MAX_SPIN_PER_USER;
-    document.getElementById("maxSpinDevice").value = MAX_SPIN_PER_USER;
-  }
-});
-
-// Toggle event on/off
-document.getElementById("toggleEventBtn").addEventListener("click", ()=>{
-  const newState = !EVENT_ON;
-  db.ref("settings/eventOn").set(newState);
-  alert(`Event telah di${newState ? "ON" : "OFF"}`);
-});
-
-// RESET EVENT button
-document.getElementById("resetEventBtn").addEventListener("click", ()=>{
-  if(!confirm("Reset event?\nIni akan mematikan event, menghapus pemenang dan mereset hitungan hadiah per device.")) return;
-  db.ref("settings/eventOn").set(false);
-  db.ref("winners").set([]);
-  db.ref("deviceWins").set({});
-  hasWon = false;
-  lastPrize = null;
-  localStorage.removeItem("hasWon");
-  alert("Event di-reset dan dimatikan. Data pemenang dan hitungan device telah dihapus.");
-});
-
-// RESET SEMUA CODE button
-document.getElementById("resetCodesBtn").addEventListener("click", ()=>{
-  if(!confirm("Hapus semua kode redeem di Firebase?")) return;
-  db.ref("codes").set({});
-  alert("Semua kode telah dihapus dari Firebase.");
 });
 
 // ================= WHEEL MANAGEMENT (realtime) =================
