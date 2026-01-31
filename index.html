@@ -40,12 +40,12 @@ input,button,select,textarea{
  font-size:14px;
 }
 button{
+ background:#00ffd5;
  font-weight:bold;
  cursor:pointer;
 }
 #spinBtn{
- background:#00ffd5;
- color:#000;
+ width:100%;
 }
 #wheelBox{
  position:relative;
@@ -123,32 +123,22 @@ small{
  margin-top:5px;
 }
 
-/* ================= FIX REDEEM BUTTON ================= */
-.codeContainer{
- display:flex;
- width:100%;
- margin-top:10px;
- position:relative;
-}
-#code{
- flex:1;
- padding:10px;
- border-radius:8px;
- border:none;
- font-size:14px;
-}
+/* tombol redeem code pojok kanan */
 #redeemBtn{
  position:absolute;
- right:4px;
- top:50%;
- transform:translateY(-50%);
+ right:5px;
+ top:5px;
  padding:6px 10px;
  font-size:12px;
- border-radius:8px;
+ border-radius:6px;
  background:#00ffd5;
  color:#000;
- font-weight:bold;
  cursor:pointer;
+ border:none;
+}
+.codeContainer{
+ position:relative;
+ width:100%;
 }
 </style>
 </head>
@@ -158,12 +148,10 @@ small{
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
 <input id="name" placeholder="Nama (1x saja)">
-
 <div class="codeContainer">
  <input id="code" placeholder="Kode tambahan spin (opsional)">
  <button id="redeemBtn">Redeem</button>
 </div>
-
 <button id="spinBtn">🌀 SPIN RNG</button>
 
 <div id="wheelBox">
@@ -202,7 +190,7 @@ small{
 // ================= CONFIG =================
 const ADMIN_PIN="XREZZKY STORE0930";
 const ADMIN_WA="6288293064112";
-let MAX_SPIN_PER_USER = 0;
+let MAX_SPIN_PER_USER = 0; 
 let MAX_WIN_PER_DEVICE = 2;
 let MAX_WINNER_GLOBAL = 10;
 const prizes=[
@@ -243,10 +231,11 @@ let hasWon=localStorage.getItem("hasWon")==="true";
 let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
 let lastPrize=null;
 
-// ============ FREE SPIN USER BARU ============
+// ================= FREE SPIN BARU =================
 const FREE_SPIN_NEW_USER = 5;
+const FREE_SPIN_ACTIVE = true;
 if(!spinData[deviceId]) spinData[deviceId]=0;
-if(!localStorage.getItem("claimedFree")){
+if(!localStorage.getItem("claimedFree") && FREE_SPIN_ACTIVE){
  spinData[deviceId] += FREE_SPIN_NEW_USER;
  localStorage.setItem("claimedFree","yes");
 }
@@ -292,25 +281,23 @@ function saveData(){
  localStorage.setItem("totalSpin",totalSpin);
 }
 
-// ================= REDEEM CODE =================
-document.getElementById("redeemBtn").addEventListener("click",()=>{
- const codeInput=document.getElementById("code");
- const code=codeInput.value.trim().toUpperCase();
- if(!code) return alert("Masukkan kode terlebih dahulu!");
- const key=deviceId+"_"+code;
- if(CODES[code] && !usedCodes[key]){
-   spinData[deviceId] += CODES[code];
-   usedCodes[key]=true;
-   saveData();
-   updateInfo();
-   codeInput.value="";
-   alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
- } else if(usedCodes[key]) alert("⚠️ Kode sudah digunakan!");
- else alert("⚠️ Kode tidak valid!");
+// ================= GLOBAL WINNERS & INFO =================
+const globalEl=document.getElementById("globalWinners");
+const infoBoard=document.getElementById("infoBoard");
+db.ref("winners").on("value", snapshot=>{
+ const data = snapshot.val() || [];
+ if(data.length===0){
+  globalEl.innerHTML="<b>Pemenang:</b><br>Belum ada pemenang";
+ }else{
+  globalEl.innerHTML="<b>Pemenang:</b><br>"+data.map(w=>`${w.name} → ${w.prize} (${w.time})`).join("<br>");
+ }
+});
+db.ref("infoBoard").on("value", snapshot=>{
+ const info = snapshot.val() || "Belum ada info event";
+ infoBoard.innerHTML="<b>INFO EVENT:</b><br>"+info;
 });
 
 // ================= SPIN =================
-// tetap seperti HTML lama
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
@@ -320,6 +307,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
  totalSpin++;
 
+ if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  spinData[deviceId]--;
  saveData();
  updateInfo();
@@ -361,6 +349,22 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
     updateInfo();
   },4200);
  });
+});
+
+// ================= REDEEM CODE =================
+document.getElementById("redeemBtn").addEventListener("click",()=>{
+ const code=document.getElementById("code").value.trim().toUpperCase();
+ if(!code) return alert("Masukkan kode!");
+ if(!CODES[code]) return alert("Kode tidak valid!");
+ const key=deviceId+"_"+code;
+ if(usedCodes[key]) return alert("Kode sudah digunakan!");
+ spinData[deviceId] += CODES[code];
+ usedCodes[key]=true;
+ saveData();
+ updateInfo();
+ alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
+ document.getElementById("code").value="";
+});
 
 // ================= CLAIM =================
 document.getElementById("claimBtn").addEventListener("click",()=>{
@@ -370,7 +374,6 @@ document.getElementById("claimBtn").addEventListener("click",()=>{
 });
 
 // ================= ADMIN =================
-// tetap sama, tidak dirubah
 let tap=0;
 document.getElementById("title").addEventListener("click",()=>{
  tap++;
@@ -380,6 +383,9 @@ document.getElementById("title").addEventListener("click",()=>{
   tap=0;
  }
 });
+
+// Admin panel functions (tidak berubah) ...
+// Update info, tambah code, max spin/win/global, reset, export dst
 document.getElementById("updateInfoBtn").addEventListener("click",()=>{
  const info=document.getElementById("adminInfo").value.trim();
  db.ref("infoBoard").set(info);
