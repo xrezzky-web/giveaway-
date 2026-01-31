@@ -287,8 +287,29 @@ function drawWheel(){
    ctx.translate(c,c);
    ctx.rotate(i*slice+slice/2);
    ctx.fillStyle="#000";
-   ctx.font="bold 12px Arial";
-   ctx.fillText(prizes[i].label,50,5);
+
+   // DYNAMIC FONT SIZE: otomatis mengecil jika teks terlalu panjang untuk slice
+   // Kita tentukan posisi teks pada radius ~50 (sama seperti sebelumnya)
+   // dan batasi lebar teks berdasarkan arc length pada radius teks tersebut.
+   const text = prizes[i].label || "";
+   const baseFontSize = 12;
+   const minFontSize = 8;
+   const textRadius = 50; // jarak dari pusat tempat teks digambar (konsisten dengan posisi sebelumnya)
+   // arc length available di radius textRadius
+   const availableArcLen = slice * textRadius;
+   // beri padding sedikit
+   const maxTextWidth = Math.max(40, Math.min(120, availableArcLen * 0.9));
+
+   let fontSize = baseFontSize;
+   ctx.font = `bold ${fontSize}px Arial`;
+   // cek ukuran teks dan turunkan font sampai muat atau mencapai minFontSize
+   while(ctx.measureText(text).width > maxTextWidth && fontSize > minFontSize){
+     fontSize--;
+     ctx.font = `bold ${fontSize}px Arial`;
+   }
+
+   // Tetap gunakan koordinat yang sama seperti sebelumnya (agar tampilan tidak berubah secara signifikan)
+   ctx.fillText(text,50,5);
    ctx.restore();
  }
 }
@@ -734,4 +755,4 @@ winnersRef.on("value", snapshot => {
 updateInfo();
 </script>
 </body>
-     </html>
+</html>
