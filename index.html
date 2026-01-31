@@ -153,6 +153,9 @@ small{
  <input id="maxSpinDevice" placeholder="Max Spin Per Device">
  <input id="maxWinDevice" placeholder="Max Hadiah Per Device">
  <input id="maxWinnerGlobal" placeholder="Max Pemenang Global">
+ <input id="newSlot" placeholder="Tambah slot roda baru (nama hadiah)">
+ <button id="addSlotBtn">➕ Tambah Slot</button>
+ <button id="removeSlotBtn">➖ Hapus Slot Terakhir</button>
  <button id="resetSpinBtn">♻ Reset Spin Semua User</button>
  <button id="restartWinnersBtn">🔄 Reset Pemenang</button>
  <button id="exportBtn">📤 EXPORT PEMENANG</button>
@@ -166,12 +169,12 @@ small{
 // ================= CONFIG =================
 const ADMIN_PIN="XREZZKY STORE0930";
 const ADMIN_WA="6288293064112";
-let MAX_SPIN_PER_USER = 0; // default 0, spin hanya dari kode/admin
+let MAX_SPIN_PER_USER = 0;
 let MAX_WIN_PER_DEVICE = 2;
 let MAX_WINNER_GLOBAL = 10;
-const WIN_CHANCE = 0.1;
+let WIN_CHANCE=0.1;
 
-const prizes=[
+let prizes=[
  {label:"ZONK",win:false},
  {label:"CLASS(1)",win:true},
  {label:"ZONK",win:false},
@@ -179,6 +182,8 @@ const prizes=[
  {label:"ZONK",win:false},
  {label:"TRAIN(1)+CLASS(1)",win:true}
 ];
+
+let CODES={ XREZ1:1, XREZ3:3, VIP5:5, MEMBER50:50};
 
 // ================= FIREBASE =================
 const firebaseConfig = {
@@ -207,13 +212,15 @@ let hasWon=localStorage.getItem("hasWon")==="true";
 let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
 let lastPrize=null;
 
-// ================= FREE SPIN NEW USER =================
+// ============ FREE SPIN BARU ============
 const FREE_SPIN_NEW_USER = 5;
 if(!spinData[deviceId]) spinData[deviceId]=0;
 if(!localStorage.getItem("claimedFree")){
  spinData[deviceId] += FREE_SPIN_NEW_USER;
  localStorage.setItem("claimedFree","yes");
 }
+
+if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
 // ================= DRAW WHEEL =================
 const canvas=document.getElementById("wheel");
@@ -272,8 +279,28 @@ db.ref("infoBoard").on("value", snapshot=>{
 
 // ================= SPIN =================
 let rot=0,lock=false;
+document.getElementById("spinBtn").addEventListener("click",()=>{
+ if(lock) return;
+ if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
+ const name=document.getElementById("name").value.trim();
+ if(!name) return alert("Isi nama!");
+ if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
+ totalSpin++;
 
-function startSpin(){
+ // Apply code
+ const codeInput=document.getElementById("code");
+ const code=codeInput.value.trim().toUpperCase();
+ if(code && CODES[code]){
+   const key=deviceId+"_"+code;
+   if(!usedCodes[key]){
+     spinData[deviceId]+=CODES[code];
+     usedCodes[key]=true;
+     saveData();
+     updateInfo();
+     codeInput.value="";
+     alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
+   } else alert(`⚠️ Code ${code} sudah digunakan!`);
+ }
  if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  spinData[deviceId]--;
  saveData();
@@ -281,8 +308,9 @@ function startSpin(){
 
  db.ref("winners").once("value").then(snapshot=>{
   const winnersData=snapshot.val()||[];
-  if(winnersData.length>=MAX_WINNER_GLOBAL){ alert("Event telah selesai."); return; }
+  if(winnersData.length>=MAX_WINNER_GLOBAL){ alert("Event telah selesai, tunggu event mendatang."); return; }
 
+  // Tentukan prize
   let idx;
   const winPrizes=prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
   const losePrizes=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
@@ -315,35 +343,7 @@ function startSpin(){
     saveData();
     updateInfo();
   },4200);
-}
-
-document.getElementById("spinBtn").addEventListener("click",()=>{
- if(lock) return;
- const name=document.getElementById("name").value.trim();
- if(!name) return alert("Isi nama!");
- if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
- totalSpin++;
-
- // cek kode dari firebase realtime
- const codeInput=document.getElementById("code");
- const code=codeInput.value.trim().toUpperCase();
- if(code){
-   db.ref(`adminConfig/codes/${code}`).once("value").then(snapshot=>{
-     const spinAdd = snapshot.val();
-     if(spinAdd){
-       const key=deviceId+"_"+code;
-       if(!usedCodes[key]){
-         spinData[deviceId]+=spinAdd;
-         usedCodes[key]=true;
-         saveData();
-         updateInfo();
-         codeInput.value="";
-         alert(`✅ Code ${code} berhasil! Spin +${spinAdd}`);
-       } else alert(`⚠️ Code ${code} sudah digunakan!`);
-     } else alert(`⚠️ Code ${code} tidak valid!`);
-     startSpin();
-   });
- } else startSpin();
+ });
 });
 
 // ================= CLAIM =================
@@ -364,6 +364,24 @@ document.getElementById("title").addEventListener("click",()=>{
  }
 });
 
+// Admin tambah/hapus slot roda
+document.getElementById("addSlotBtn").addEventListener("click",()=>{
+ const val=document.getElementById("newSlot").value.trim();
+ if(val){
+  prizes.push({label:val, win:true});
+  drawWheel();
+  alert(`Slot '${val}' ditambahkan!`);
+  document.getElementById("newSlot").value="";
+ }
+});
+document.getElementById("removeSlotBtn").addEventListener("click",()=>{
+ if(prizes.length>0){
+  const removed=prizes.pop();
+  drawWheel();
+  alert(`Slot '${removed.label}' dihapus!`);
+ }
+});
+
 // Update info event
 document.getElementById("updateInfoBtn").addEventListener("click",()=>{
  const info=document.getElementById("adminInfo").value.trim();
@@ -371,14 +389,12 @@ document.getElementById("updateInfoBtn").addEventListener("click",()=>{
  alert("Info event diperbarui!");
 });
 
-// Tambah kode baru (admin) disimpan ke firebase realtime
+// Tambah kode baru
 document.getElementById("addCodeBtn").addEventListener("click",()=>{
  const newCode=document.getElementById("newCode").value.trim().toUpperCase();
  const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
- if(newCode && spin>0){
-   db.ref(`adminConfig/codes/${newCode}`).set(spin);
-   alert(`Code ${newCode} ditambahkan! Spin +${spin}`);
- } else alert("Masukkan kode dan spin dengan benar.");
+ if(newCode && spin>0){ CODES[newCode]=spin; alert(`Code ${newCode} ditambahkan! Spin +${spin}`);}
+ else alert("Masukkan kode dan spin dengan benar.");
 });
 
 // Update max spin & max hadiah & max pemenang
