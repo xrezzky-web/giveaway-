@@ -137,13 +137,13 @@ small{
 </head>
 <body>
 <div class="box">
-<h2 id="title">XREZZKYSTORE</h2>
+<h2 id="title">XREZZKY STORE</h2>
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
 <input id="name" placeholder="Nama (1x saja)">
 <div id="codeContainer">
  <input id="code" placeholder="Kode tambahan spin">
- <button id="redeemBtn">🎁 Redeem Code</button>
+ <button id="redeemBtn">🎁 Redeem</button>
 </div>
 <button id="spinBtn">🌀 SPIN RNG</button>
 
@@ -294,7 +294,7 @@ document.getElementById("redeemBtn").addEventListener("click",()=>{
  if(!code) return alert("Masukkan kode!");
  const key=deviceId+"_"+code;
  if(CODES[code] && !usedCodes[key]){
-   spinData[deviceId]+=(CODES[code]||0);
+   spinData[deviceId]+=CODES[code];
    usedCodes[key]=true;
    codeInput.value="";
    saveData();
