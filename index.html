@@ -1,368 +1,737 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XREZZKYSTORE RNG GIVEAWAY</title>
-    <style>
-        :root { --primary: #00ffd5; --bg: #071414; --dark: #020b0b; }
-        body { margin:0; background:radial-gradient(circle,#1f6f6f,#020b0b); font-family:Arial,sans-serif; color:#fff; display:flex; justify-content:center; }
-        .box { width:360px; margin:20px auto; background:var(--bg); border-radius:18px; padding:20px; box-shadow:0 0 25px var(--primary); display:flex; flex-direction:column; align-items:center; }
-        h2 { text-align:center; color:var(--primary); margin:5px 0; cursor:pointer; text-transform: uppercase; }
-        input, button, select { width:100%; margin-top:10px; padding:12px; border-radius:8px; border:none; box-sizing:border-box; font-size:14px; outline: none; }
-        button { background:var(--primary); font-weight:bold; cursor:pointer; color: #000; transition: 0.3s; }
-        button:active { transform: scale(0.95); }
-        button:disabled { background: #555; cursor: not-allowed; }
-        #wheelBox { position:relative; width:280px; height:280px; margin:20px auto; }
-        #wheel { width:100%; height:100%; border-radius:50%; border:5px solid var(--primary); transition: transform 4s cubic-bezier(.25,.1,.25,1); }
-        #arrow { position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-size:30px; z-index:10; color: var(--primary); }
-        .log, #globalWinners, #infoBoard, .admin-sub { background:var(--dark); padding:10px; overflow:auto; font-size:12px; margin-top:10px; width:100%; border-radius:8px; border:1px solid #1a3a3a; box-sizing: border-box; }
-        .log { height: 80px; }
-        #globalWinners, #infoBoard { max-height:120px; }
-        #adminPanel { display:none; background:#0a1f1f; padding:15px; border-radius:10px; margin-top:15px; border:2px dashed var(--primary); width:100%; box-sizing: border-box; }
-        .code-wrapper { display:flex; width:100%; gap: 5px; }
-        .code-wrapper button { width: 80px; }
-        .wheel-item { display: flex; justify-content: space-between; background: #111; padding: 5px; margin-top: 5px; border-radius: 4px; align-items: center;}
-        .badge { padding: 2px 5px; border-radius: 4px; font-size: 10px; font-weight: bold; }
-        .badge-win { background: #25D366; color: #000; }
-        .badge-zonk { background: #ff4444; color: #fff; }
-        .status-on { color: #25D366; font-weight: bold; }
-        .status-off { color: #ff4444; font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XREZZKYSTORE RNG GIVEAWAY</title>
+<style>
+body{
+ margin:0;
+ background:radial-gradient(circle,#1f6f6f,#020b0b);
+ font-family:Arial,Helvetica,sans-serif;
+ color:#fff;
+ display:flex;
+ justify-content:center;
+}
+.box{
+ width:360px;
+ margin:30px auto;
+ background:#071414;
+ border-radius:18px;
+ padding:20px;
+ box-shadow:0 0 25px #00ffd5;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+}
+h2{
+ text-align:center;
+ color:#00ffd5;
+ margin:5px 0;
+ cursor:pointer;
+}
+input,button,select,textarea{
+ width:100%;
+ margin-top:10px;
+ padding:10px;
+ border-radius:8px;
+ border:none;
+ box-sizing:border-box;
+ font-size:14px;
+}
+button{
+ background:#00ffd5;
+ font-weight:bold;
+ cursor:pointer;
+}
+#redeemBtn{
+ width:100px;
+ font-size:14px;
+ padding:10px;
+ border-radius:8px;
+ margin-left:10px;
+}
+#wheelBox{
+ position:relative;
+ width:280px;
+ height:280px;
+ margin:20px auto;
+}
+#wheel{
+ width:100%;
+ height:100%;
+ border-radius:50%;
+ border:8px solid #00ffd5;
+ transition: transform 4s cubic-bezier(.25,.1,.25,1);
+}
+#arrow{
+ position:absolute;
+ bottom:-28px;
+ left:50%;
+ transform:translateX(-50%);
+ font-size:24px;
+ color:#fff;
+ text-shadow:0 0 8px #00ffd5;
+ z-index:10;
+}
+#result{
+ margin-top:15px;
+ font-size:16px;
+ font-weight:bold;
+ text-align:center;
+}
+.log{
+ background:#000;
+ padding:10px;
+ height:120px;
+ overflow:auto;
+ font-size:12px;
+ margin-top:20px;
+ width:100%;
+ border-radius:8px;
+}
+#globalWinners, #infoBoard{
+ background:#020b0b;
+ padding:10px;
+ overflow:auto;
+ font-size:12px;
+ margin-top:10px;
+ width:100%;
+ border-radius:8px;
+ border:1px solid #00ffd5;
+ max-height:120px;
+}
+small{
+ color:#aaa;
+ margin-top:8px;
+ display:block;
+ text-align:center;
+}
+#claimBtn{
+ background:#25D366;
+ color:#000;
+ margin-top:10px;
+ display:none;
+ width:100%;
+}
+#adminPanel{
+ display:none;
+ background:#020b0b;
+ padding:10px;
+ border-radius:10px;
+ margin-top:15px;
+ border:1px solid #00ffd5;
+ width:100%;
+}
+#adminPanel button, #adminPanel textarea, #adminPanel input{
+ margin-top:5px;
+}
+.code-wrapper{
+ display:flex;
+ width:100%;
+ align-items:center;
+}
+.code-wrapper input{
+ flex:1;
+}
+
+/* Additional small styles for admin manager UI */
+#wheelManager{ margin-top:10px; border-top:1px solid #00ffd5; padding-top:10px; }
+.wheel-item{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+.wheel-item input{ flex:1; padding:6px; font-size:13px; }
+.wheel-item select{ width:110px; }
+.wheel-item button{ width:60px; padding:6px; font-size:12px; }
+#eventControls{ display:flex; gap:6px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+#eventStatus{ font-weight:bold; color:#00ffd5; margin-left:6px; }
+</style>
 </head>
 <body>
-
 <div class="box">
-    <h2 id="title">XREZZKYSTORE</h2>
-    <p id="eventStatusDisplay" style="font-size: 12px; margin-bottom: 10px;">Status: Loading...</p>
+<h2 id="title">XREZZKYSTORE</h2>
+<p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
-    <input id="userName" placeholder="Masukkan Nama Anda">
-    
-    <div class="code-wrapper">
-        <input id="redeemInput" placeholder="Kode Redeem">
-        <button id="redeemBtn">REDEEM</button>
-    </div>
+<input id="name" placeholder="Nama (1x saja)">
 
-    <div id="wheelBox">
-        <div id="arrow">▼</div>
-        <canvas id="wheel" width="500" height="500"></canvas>
-    </div>
+<div class="code-wrapper">
+ <input id="code" placeholder="Kode tambahan spin (opsional)">
+ <button id="redeemBtn">Redeem</button>
+</div>
 
-    <button id="spinBtn">🌀 SPIN SEKARANG</button>
-    <div id="result" style="margin-top:10px; font-weight:bold; color:var(--primary); min-height: 1.2em;"></div>
-    
-    <div id="infoBoard"><b>📢 INFO:</b><br>Menghubungkan...</div>
-    <div id="globalWinners"><b>🏆 PEMENANG TERBARU:</b><br>Belum ada data.</div>
-    <div class="log" id="spinLog"><b>📜 LOG SPIN ANDA:</b></div>
+<button id="spinBtn">🌀 SPIN RNG</button>
 
-    <div id="adminPanel">
-        <h3 style="margin-top:0; font-size: 14px; color: var(--primary);">🛠 ADMIN CONTROL</h3>
-        
-        <label>Event System:</label>
-        <select id="admEventStatus">
-            <option value="ON">EVENT ON (Hadiah Aktif)</option>
-            <option value="OFF">EVENT OFF (Selalu Zonk)</option>
-        </select>
+<div id="wheelBox">
+ <canvas id="wheel" width="280" height="280"></canvas>
+ <div id="arrow">⬆️</div>
+</div>
 
-        <div style="margin-top: 10px;">
-            <label>Limit Global Pemenang:</label>
-            <input type="number" id="admMaxGlobal" placeholder="Contoh: 10">
-            <label>Limit Hadiah Per Device:</label>
-            <input type="number" id="admMaxPerDevice" placeholder="Contoh: 1">
-        </div>
+<div id="result"></div>
+<button id="claimBtn">📩 KLAIM HADIAH</button>
 
-        <button id="saveSettingsBtn" style="background:#fff">💾 SIMPAN PENGATURAN</button>
+<small id="spinInfo"></small>
+<div class="log" id="log"></div>
+<div id="infoBoard"><b>INFO EVENT:</b><br>Loading...</div>
+<div id="globalWinners"><b>Pemenang:</b><br>Loading...</div>
 
-        <hr style="border: 0.5px solid #333; margin: 15px 0;">
+<div id="adminPanel">
+ <b>🔒 ADMIN PANEL</b>
+ <textarea id="adminInfo" placeholder="Tulis info event disini..."></textarea>
+ <button id="updateInfoBtn">💾 Update Info Event</button>
+ <input id="newCode" placeholder="Kode Baru">
+ <input id="newCodeSpin" placeholder="Spin tambahan">
+ <button id="addCodeBtn">➕ Tambah Code</button>
+ <input id="maxSpinDevice" placeholder="Max Spin Per Device">
+ <input id="maxWinDevice" placeholder="Max Hadiah Per Device">
+ <input id="maxWinnerGlobal" placeholder="Max Pemenang Global">
+ <button id="resetSpinBtn">♻ Reset Spin Semua User</button>
+ <button id="restartWinnersBtn">🔄 Reset Pemenang</button>
+ <button id="exportBtn">📤 EXPORT PEMENANG</button>
+ <button id="resetBtn">❌ Hapus Semua (User & Pemenang)</button>
 
-        <label>🎡 WHEEL MANAGER</label>
-        <div id="admWheelList" class="admin-sub"></div>
-        <div class="code-wrapper">
-            <input id="newLabel" placeholder="Label">
-            <select id="newType" style="width: 80px;">
-                <option value="ZONK">ZONK</option>
-                <option value="HADIAH">WIN</option>
-            </select>
-        </div>
-        <button id="addWheelBtn">➕ TAMBAH SLOT</button>
+ <!-- NEW: Event Controls -->
+ <div id="eventControls">
+   <div>Event: <span id="eventStatus">ON</span></div>
+   <button id="toggleEventBtn">TURN OFF</button>
+   <button id="resetEventBtn">RESET EVENT</button>
+   <button id="resetCodesBtn">RESET SEMUA CODE</button>
+ </div>
 
-        <hr style="border: 0.5px solid #333; margin: 15px 0;">
+ <!-- NEW: Wheel Manager -->
+ <div id="wheelManager">
+   <b>🎡 Wheel Manager</b>
+   <div id="wheelList">Loading...</div>
+   <input id="newWheelLabel" placeholder="Nama hadiah baru">
+   <select id="newWheelType"><option value="win">HADIAH</option><option value="lose">ZONK</option></select>
+   <button id="addWheelItemBtn">➕ Tambah Item Wheel</button>
+ </div>
 
-        <button id="resetCodesBtn" style="background:#ff9800">🔄 RESTART SEMUA REDEEM CODE</button>
-        <button id="resetEventBtn" style="background:#ff4444; color:#fff; margin-top:5px;">🚨 RESET EVENT (HAPUS DATA)</button>
-    </div>
-    <small style="margin-top: 10px; color: #555;">v2.0 Realtime Engine</small>
+</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <script>
-// --- CONFIG FIREBASE (Gunakan Milik Anda) ---
+// ================= CONFIG =================
+const ADMIN_PIN="XREZZKY STORE0930";
+const ADMIN_WA="6288293064112";
+let MAX_SPIN_PER_USER = 0;
+let MAX_WIN_PER_DEVICE = 2;
+let MAX_WINNER_GLOBAL = 10;
+const prizes=[
+ {label:"ZONK",win:false},
+ {label:"CLASS(1)",win:true},
+ {label:"ZONK",win:false},
+ {label:"TRAIN(1)",win:true},
+ {label:"ZONK",win:false},
+ {label:"TRAIN(1)+CLASS(1)",win:true}
+];
+let CODES={};
+let WIN_CHANCE=0.1;
+// NEW: event on/off local flag (will be synced with Firebase settings)
+let EVENT_ON = true;
+
+// ================= FIREBASE =================
 const firebaseConfig = {
-    apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
-    authDomain: "xrezzkystore-rng.firebaseapp.com",
-    databaseURL: "https://xrezzkystore-rng-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "xrezzkystore-rng",
-    storageBucket: "xrezzkystore-rng.appspot.com",
-    messagingSenderId: "304889774590",
-    appId: "1:304889774590:web:5d52c2485ca2137ad480af"
+ apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
+ authDomain: "xrezzkystore-rng.firebaseapp.com",
+ databaseURL: "https://xrezzkystore-rng-default-rtdb.asia-southeast1.firebasedatabase.app",
+ projectId: "xrezzkystore-rng",
+ storageBucket: "xrezzkystore-rng.appspot.com",
+ messagingSenderId: "304889774590",
+ appId: "1:304889774590:web:5d52c2485ca2137ad480af",
+ measurementId: "G-MQ71QRYHV7"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db=firebase.database();
 
-// --- STATE & IDENTIFICATION ---
-const deviceId = localStorage.getItem("xr_dev_id") || "DEV-" + Math.random().toString(36).substr(2, 9);
-localStorage.setItem("xr_dev_id", deviceId);
+// ================= STORAGE =================
+const deviceId=localStorage.getItem("devId") || (()=>{ 
+ const id="dev-"+Math.random().toString(36).slice(2);
+ localStorage.setItem("devId",id);
+ return id;
+})();
+let spinData=JSON.parse(localStorage.getItem("spinData")||"{}");
+let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
+let lockedName=localStorage.getItem("lockedName");
+let hasWon=localStorage.getItem("hasWon")==="true";
+let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
+let lastPrize=null;
 
-let wheelData = [];
-let eventSettings = { status: "OFF", maxGlobal: 0, maxPerDevice: 0 };
-let userSpinCount = parseInt(localStorage.getItem("xr_spins") || "1"); // Default 1 spin awal
-let userWinCount = 0;
-let isSpinning = false;
-let currentRotation = 0;
+// FREE SPIN USER BARU
+const FREE_SPIN_NEW_USER = 5;
+if(!spinData[deviceId]) spinData[deviceId]=0;
+if(!localStorage.getItem("claimedFree")){
+ spinData[deviceId]+=FREE_SPIN_NEW_USER;
+ localStorage.setItem("claimedFree","yes");
+}
+if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
-const canvas = document.getElementById("wheel");
-const ctx = canvas.getContext("2d");
+// LOAD CODES DARI FIREBASE
+db.ref("codes").on("value", snapshot=>{
+ CODES = snapshot.val() || {};
+});
 
-// --- CORE FUNCTIONS ---
+// ================= DRAW WHEEL =================
+const canvas=document.getElementById("wheel");
+const ctx=canvas.getContext("2d");
+const c=140;
+function drawWheel(){
+ const slice=2*Math.PI/prizes.length;
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ for(let i=0;i<prizes.length;i++){
+   ctx.beginPath();
+   ctx.moveTo(c,c);
+   ctx.fillStyle=`hsl(${Math.random()*360},80%,55%)`;
+   ctx.arc(c,c,140,i*slice,(i+1)*slice);
+   ctx.fill();
+   ctx.save();
+   ctx.translate(c,c);
+   ctx.rotate(i*slice+slice/2);
+   ctx.fillStyle="#000";
+   ctx.font="bold 12px Arial";
+   ctx.fillText(prizes[i].label,50,5);
+   ctx.restore();
+ }
+}
+drawWheel();
 
-function drawWheel() {
-    if (wheelData.length === 0) return;
-    const arc = Math.PI * 2 / wheelData.length;
-    ctx.clearRect(0, 0, 500, 500);
-    
-    wheelData.forEach((item, i) => {
-        const angle = i * arc;
-        ctx.beginPath();
-        ctx.fillStyle = (i % 2 === 0) ? "#071414" : "#00ffd5";
-        ctx.moveTo(250, 250);
-        ctx.arc(250, 250, 240, angle, angle + arc);
-        ctx.fill();
-        ctx.strokeStyle = "#1a3a3a";
-        ctx.stroke();
-
-        ctx.save();
-        ctx.translate(250, 250);
-        ctx.rotate(angle + arc / 2);
-        ctx.textAlign = "right";
-        ctx.fillStyle = (i % 2 === 0) ? "#fff" : "#000";
-        ctx.font = "bold 20px Arial";
-        ctx.fillText(item.label, 220, 10);
-        ctx.restore();
-    });
+// ================= UTIL =================
+function updateInfo(){
+ document.getElementById("spinInfo").innerText=
+  spinData[deviceId]>0?
+  `🎟 Spin tersisa: ${spinData[deviceId]}`:
+  `⚠️ Spin habis!`;
+}
+function saveData(){
+ localStorage.setItem("spinData",JSON.stringify(spinData));
+ localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
+ localStorage.setItem("hasWon",hasWon?"true":"false");
+ localStorage.setItem("lockedName",lockedName||"");
+ localStorage.setItem("totalSpin",totalSpin);
 }
 
-// --- SYNC REALTIME ---
+// ================= SPIN =================
+let rot=0,lock=false;
+document.getElementById("spinBtn").addEventListener("click",()=>{
+ if(lock) return;
+ if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
+ const name=document.getElementById("name").value.trim();
+ if(!name) return alert("Isi nama!");
+ if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
+ totalSpin++;
 
-db.ref("settings").on("value", snap => {
-    if (snap.exists()) {
-        eventSettings = snap.val();
-        const statusEl = document.getElementById("eventStatusDisplay");
-        statusEl.innerHTML = eventSettings.status === "ON" ? 'Status: <span class="status-on">EVENT ACTIVE</span>' : 'Status: <span class="status-off">EVENT PAUSED (ZONK ONLY)</span>';
-        
-        // Sync Admin UI
-        document.getElementById("admEventStatus").value = eventSettings.status;
-        document.getElementById("admMaxGlobal").value = eventSettings.maxGlobal;
-        document.getElementById("admMaxPerDevice").value = eventSettings.maxPerDevice;
-    }
-});
+ spinData[deviceId]--;
+ saveData();
+ updateInfo();
 
-db.ref("wheel").on("value", snap => {
-    wheelData = [];
-    const admList = document.getElementById("admWheelList");
-    admList.innerHTML = "";
-    
-    snap.forEach(child => {
-        const data = { id: child.key, ...child.val() };
-        wheelData.push(data);
-        
-        // Admin Wheel UI
-        const div = document.createElement("div");
-        div.className = "wheel-item";
-        div.innerHTML = `
-            <span>${data.label} <span class="badge ${data.type === 'HADIAH' ? 'badge-win' : 'badge-zonk'}">${data.type}</span></span>
-            <button onclick="deleteWheel('${data.id}')" style="width:auto; margin:0; padding:2px 8px; background:#ff4444; color:#fff">X</button>
-        `;
-        admList.appendChild(div);
-    });
-    drawWheel();
-});
+ // Fetch current winners & deviceWins to enforce limits and event status.
+ db.ref("winners").once("value").then(snapshot=>{
+  const winnersData=snapshot.val()||[];
+  // get device wins from firebase
+  db.ref("deviceWins/"+deviceId).once("value").then(dwSnap=>{
+    const deviceWinsCount = dwSnap.val() || 0;
 
-db.ref("winners").on("value", snap => {
-    const box = document.getElementById("globalWinners");
-    box.innerHTML = "<b>🏆 PEMENANG TERBARU:</b><br>";
-    let count = 0;
-    const wins = [];
-    snap.forEach(child => {
-        const w = child.val();
-        wins.unshift(w); // Newest first
-        if(w.deviceId === deviceId) count++;
-    });
-    userWinCount = count;
-    wins.slice(0, 10).forEach(w => {
-        box.innerHTML += `• ${w.name}: ${w.prize} <br>`;
-    });
-});
+    // Determine if we must force ZONK due to event off or limits
+    const winPrizes=prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
+    const losePrizes=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
 
-// --- LOGIC SPIN ---
+    // Conditions that force ZONK:
+    // - EVENT is OFF
+    // - global winners reached MAX_WINNER_GLOBAL
+    // - deviceWinsCount reached MAX_WIN_PER_DEVICE
+    let forceZonk = false;
+    if(!EVENT_ON) forceZonk = true;
+    if(winnersData.length >= MAX_WINNER_GLOBAL) forceZonk = true;
+    if(deviceWinsCount >= MAX_WIN_PER_DEVICE) forceZonk = true;
 
-document.getElementById("spinBtn").onclick = () => {
-    const name = document.getElementById("userName").value.trim();
-    if (isSpinning) return;
-    if (!name) return alert("Masukkan nama untuk spin!");
-    if (userSpinCount <= 0) return alert("Spin anda habis! Gunakan kode redeem.");
-
-    isSpinning = true;
-    document.getElementById("result").innerText = "Memutar...";
-    
-    // Tentukan Hasil (Server-side Logic Simulation)
-    let winIdx = -1;
-    const possibleZonks = wheelData.map((v, i) => v.type === 'ZONK' ? i : -1).filter(v => v !== -1);
-    const possibleWins = wheelData.map((v, i) => v.type === 'HADIAH' ? i : -1).filter(v => v !== -1);
-
-    db.ref("winners").once("value", snap => {
-        const totalWinners = snap.numChildren();
-        let finalIdx;
-
-        // Kondisi ZONK Otomatis
-        if (eventSettings.status === "OFF" || 
-            totalWinners >= eventSettings.maxGlobal || 
-            userWinCount >= eventSettings.maxPerDevice || 
-            possibleWins.length === 0) {
-            finalIdx = possibleZonks[Math.floor(Math.random() * possibleZonks.length)];
-        } else {
-            // RNG (10% Chance Hadiah if available)
-            if (Math.random() < 0.2) { 
-                finalIdx = possibleWins[Math.floor(Math.random() * possibleWins.length)];
-            } else {
-                finalIdx = possibleZonks[Math.floor(Math.random() * possibleZonks.length)];
-            }
+    let idx;
+    if(forceZonk || hasWon){
+      // always pick a lose prize
+      idx = losePrizes[Math.floor(Math.random()*losePrizes.length)];
+    } else {
+      // normal operation (event on and within limits)
+      idx = Math.random()<WIN_CHANCE ? winPrizes[Math.floor(Math.random()*winPrizes.length)] : losePrizes[Math.floor(Math.random()*losePrizes.length)];
+      // additionally, even if randomly picked a winning prize, double-check limits
+      if(prizes[idx].win){
+        if(winnersData.length >= MAX_WINNER_GLOBAL || deviceWinsCount >= MAX_WIN_PER_DEVICE || !EVENT_ON){
+          idx = losePrizes[Math.floor(Math.random()*losePrizes.length)];
         }
+      }
+    }
 
-        // Animasi Muter
-        const sectorAngle = 360 / wheelData.length;
-        const extraRot = (360 * 5); // 5 putaran
-        const targetAngle = extraRot + (360 - (finalIdx * sectorAngle) - (sectorAngle / 2));
-        
-        currentRotation += targetAngle;
-        document.getElementById("wheel").style.transform = `rotate(${currentRotation}deg)`;
+    const anglePer=360/prizes.length;
+    const target=90-(idx*anglePer)-anglePer/2;
+    rot+=360*6+(target-(rot%360));
+    lock=true;
+    canvas.style.transform=`rotate(${rot}deg)`;
 
-        setTimeout(() => {
-            isSpinning = false;
-            const res = wheelData[finalIdx];
-            document.getElementById("result").innerText = `Hasil: ${res.label}`;
-            
-            // Kurangi Spin
-            userSpinCount--;
-            localStorage.setItem("xr_spins", userSpinCount);
+    setTimeout(()=>{
+      lock=false;
+      lastPrize=prizes[idx];
+      document.getElementById("result").innerText=`🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
+      document.getElementById("log").innerHTML+=`<div>${lockedName} → ${lastPrize.label}</div>`;
 
-            // Simpan Jika Menang
-            if (res.type === "HADIAH") {
-                const winData = {
-                    name: name,
-                    prize: res.label,
-                    deviceId: deviceId,
-                    time: new Date().toLocaleString()
-                };
-                db.ref("winners").push(winData);
-                alert("SELAMAT! Anda Menang: " + res.label);
-            }
-            
-            // Update Log
-            const logEntry = document.createElement("div");
-            logEntry.innerText = `[${new Date().toLocaleTimeString()}] ${res.label}`;
-            document.getElementById("spinLog").prepend(logEntry);
-        }, 4000);
-    });
-};
-
-// --- REDEEM SYSTEM ---
-
-document.getElementById("redeemBtn").onclick = () => {
-    const code = document.getElementById("redeemInput").value.trim().toUpperCase();
-    if(!code) return;
-
-    db.ref("codes/" + code).once("value", snap => {
-        if(snap.exists()){
-            const spinBonus = snap.val();
-            const usedRef = db.ref("used_codes/" + deviceId + "_" + code);
-            
-            usedRef.once("value", uSnap => {
-                if(uSnap.exists()){
-                    alert("Kode ini sudah pernah Anda gunakan!");
-                } else {
-                    userSpinCount += spinBonus;
-                    localStorage.setItem("xr_spins", userSpinCount);
-                    usedRef.set(true);
-                    alert("Berhasil! Spin bertambah " + spinBonus);
-                    document.getElementById("redeemInput").value = "";
-                }
+      // If this is a true win and event is on and limits not reached and user hasn't won before -> record winner
+      if(lastPrize.win && !hasWon && EVENT_ON){
+        // Check current winners & deviceWins again to be safe
+        db.ref("winners").once("value").then(snap2=>{
+          const current=snap2.val()||[];
+          if(current.length < MAX_WINNER_GLOBAL){
+            db.ref("deviceWins/"+deviceId).once("value").then(dwSnap2=>{
+              const currentDeviceWins = dwSnap2.val() || 0;
+              if(currentDeviceWins < MAX_WIN_PER_DEVICE){
+                // Record winner
+                hasWon=true;
+                const timeStamp=new Date().toLocaleString();
+                current.push({name:lockedName, prize:lastPrize.label, time:timeStamp});
+                db.ref("winners").set(current);
+                // increment device wins
+                db.ref("deviceWins/"+deviceId).set(currentDeviceWins+1);
+                document.getElementById("claimBtn").style.display="block";
+                const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}\n🕒 ${timeStamp}`);
+                window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
+              } else {
+                // Device limit reached; treat as zonk (do not record)
+                hasWon = hasWon; // no change
+              }
             });
-        } else {
-            alert("Kode tidak valid.");
-        }
-    });
-};
+          } else {
+            // global limit reached: do nothing
+          }
+        });
+      }
 
-// --- ADMIN PANEL LOGIC ---
+      // If not recorded as winner (either zonk or limitations), ensure claim button not shown
+      if(!lastPrize.win || !hasWon) document.getElementById("claimBtn").style.display="none";
 
-let tapCount = 0;
-document.getElementById("title").onclick = () => {
-    tapCount++;
-    if(tapCount >= 5) {
-        const pw = prompt("Masukkan PIN Admin:");
-        if(pw === "0930") { // PIN Default
-            document.getElementById("adminPanel").style.display = "block";
-            alert("Admin Mode Aktif");
-        }
-        tapCount = 0;
+      saveData();
+      updateInfo();
+    },4200);
+
+  });
+ });
+});
+
+// ================= REDEEM CODE =================
+document.getElementById("redeemBtn").addEventListener("click",()=>{
+ const codeInput=document.getElementById("code");
+ const code=codeInput.value.trim().toUpperCase();
+ if(!code) return alert("Masukkan kode!");
+ if(CODES[code]){
+   const key=deviceId+"_"+code;
+   if(!usedCodes[key]){
+     spinData[deviceId]+=CODES[code];
+     usedCodes[key]=true;
+     saveData();
+     updateInfo();
+     codeInput.value="";
+     alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
+   }else alert("⚠️ Kode sudah digunakan!");
+ }else alert("⚠️ Kode tidak valid!");
+});
+
+// ================= CLAIM =================
+document.getElementById("claimBtn").addEventListener("click",()=>{
+ if(!lastPrize||!lastPrize.win) return;
+ const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`);
+ window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
+});
+
+// ================= ADMIN =================
+let tap=0;
+document.getElementById("title").addEventListener("click",()=>{
+ tap++;
+ if(tap>=5){
+  const pin=prompt("PIN ADMIN:");
+  if(pin===ADMIN_PIN) document.getElementById("adminPanel").style.display="block";
+  tap=0;
+ }
+});
+
+// UPDATE INFO EVENT
+document.getElementById("updateInfoBtn").addEventListener("click",()=>{
+ const info=document.getElementById("adminInfo").value.trim();
+ db.ref("infoBoard").set(info);
+ alert("Info event diperbarui!");
+});
+
+// ADD CODE PUBLIK
+document.getElementById("addCodeBtn").addEventListener("click",()=>{
+ const newCode=document.getElementById("newCode").value.trim().toUpperCase();
+ const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
+ if(newCode && spin>0){
+   db.ref("codes/"+newCode).set(spin);
+   alert(`Code ${newCode} ditambahkan ke publik! Spin +${spin}`);
+ }else alert("Masukkan kode dan spin dengan benar.");
+});
+
+// UPDATE MAX / RESET / EXPORT
+document.getElementById("maxSpinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxSpinDevice").value)||0; MAX_SPIN_PER_USER=v; alert(`Max spin per device diubah menjadi ${v}`);});
+document.getElementById("maxWinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinDevice").value)||0; MAX_WIN_PER_DEVICE=v; alert(`Max hadiah per device diubah menjadi ${v}`);});
+document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0; MAX_WINNER_GLOBAL=v; alert(`Max pemenang global diubah menjadi ${v}`);});
+
+document.getElementById("resetSpinBtn").addEventListener("click",()=>{if(confirm("Reset spin semua user?")){localStorage.clear();location.reload();}});
+document.getElementById("restartWinnersBtn").addEventListener("click",()=>{if(confirm("Reset data pemenang?")){db.ref("winners").set([]);}});
+document.getElementById("exportBtn").addEventListener("click",()=>{
+ db.ref("winners").once("value").then(snapshot=>{
+  const data = snapshot.val() || [];
+  if(data.length===0) return alert("Belum ada pemenang");
+  let t="DAFTAR PEMENANG:\n\n";
+  data.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize} (${w.time})\n`);
+  alert(t);
+ });
+});
+document.getElementById("resetBtn").addEventListener("click",()=>{if(confirm("Hapus semua user dan pemenang?")){db.ref("winners").set([]);localStorage.clear();location.reload();}});
+
+// ================= NEW ADMIN FEATURES IMPLEMENTATION =================
+
+// -- Sync settings from Firebase (realtime) --
+const settingsRef = db.ref("settings");
+settingsRef.on("value", snap => {
+  const s = snap.val() || {};
+  if(typeof s.eventOn !== "undefined") {
+    EVENT_ON = s.eventOn === true;
+  } else {
+    // default to true if not present
+    EVENT_ON = true;
+    db.ref("settings/eventOn").set(true);
+  }
+  document.getElementById("eventStatus").innerText = EVENT_ON ? "ON" : "OFF";
+  document.getElementById("toggleEventBtn").innerText = EVENT_ON ? "TURN OFF" : "TURN ON";
+
+  if(typeof s.maxWinnerGlobal !== "undefined") {
+    MAX_WINNER_GLOBAL = parseInt(s.maxWinnerGlobal) || MAX_WINNER_GLOBAL;
+    document.getElementById("maxWinnerGlobal").value = MAX_WINNER_GLOBAL;
+  }
+  if(typeof s.maxWinPerDevice !== "undefined") {
+    MAX_WIN_PER_DEVICE = parseInt(s.maxWinPerDevice) || MAX_WIN_PER_DEVICE;
+    document.getElementById("maxWinDevice").value = MAX_WIN_PER_DEVICE;
+  }
+  if(typeof s.maxSpinPerUser !== "undefined") {
+    MAX_SPIN_PER_USER = parseInt(s.maxSpinPerUser) || MAX_SPIN_PER_USER;
+    document.getElementById("maxSpinDevice").value = MAX_SPIN_PER_USER;
+  }
+});
+
+// When admin changes max inputs, persist to Firebase as well
+document.getElementById("maxSpinDevice").addEventListener("change", ()=>{
+  const v = parseInt(document.getElementById("maxSpinDevice").value) || 0;
+  MAX_SPIN_PER_USER = v;
+  db.ref("settings/maxSpinPerUser").set(v);
+  alert(`Max spin per device diubah menjadi ${v}`);
+});
+document.getElementById("maxWinDevice").addEventListener("change", ()=>{
+  const v = parseInt(document.getElementById("maxWinDevice").value) || 0;
+  MAX_WIN_PER_DEVICE = v;
+  db.ref("settings/maxWinPerDevice").set(v);
+  alert(`Max hadiah per device diubah menjadi ${v}`);
+});
+document.getElementById("maxWinnerGlobal").addEventListener("change", ()=>{
+  const v = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
+  MAX_WINNER_GLOBAL = v;
+  db.ref("settings/maxWinnerGlobal").set(v);
+  alert(`Max pemenang global diubah menjadi ${v}`);
+});
+
+// Toggle event on/off
+document.getElementById("toggleEventBtn").addEventListener("click", ()=>{
+  const newState = !EVENT_ON;
+  db.ref("settings/eventOn").set(newState);
+  // local update will be handled by the settingsRef listener
+  alert(`Event telah di${newState ? "ON" : "OFF"}`);
+});
+
+// RESET EVENT button
+document.getElementById("resetEventBtn").addEventListener("click", ()=>{
+  if(!confirm("Reset event?\nIni akan mematikan event, menghapus pemenang dan mereset hitungan hadiah per device.")) return;
+  // Set event OFF
+  db.ref("settings/eventOn").set(false);
+  // Reset winners and deviceWins in firebase
+  db.ref("winners").set([]);
+  db.ref("deviceWins").set({});
+  // Reset local flags
+  hasWon = false;
+  lastPrize = null;
+  localStorage.removeItem("hasWon");
+  // Inform admin
+  alert("Event di-reset dan dimatikan. Data pemenang dan hitungan device telah dihapus.");
+});
+
+// RESET SEMUA CODE button
+document.getElementById("resetCodesBtn").addEventListener("click", ()=>{
+  if(!confirm("Hapus semua kode redeem di Firebase?")) return;
+  db.ref("codes").set({});
+  alert("Semua kode telah dihapus dari Firebase.");
+});
+
+// ================= WHEEL MANAGEMENT (realtime) =================
+
+// Helper: ensure wheelItems exist in firebase (initialize if absent)
+const wheelItemsRef = db.ref("wheelItems");
+wheelItemsRef.once("value").then(snap=>{
+  if(!snap.exists()){
+    // initialize from current prizes
+    const initial = prizes.map(p=>({label: p.label, win: !!p.win}));
+    db.ref("wheelItems").set(initial);
+  }
+});
+
+// Listen realtime for wheelItems changes and sync to local prizes & UI
+wheelItemsRef.on("value", snap=>{
+  const items = snap.val();
+  if(!items || !Array.isArray(items) || items.length === 0){
+    // fallback: keep existing prizes but ensure wheelItems in DB not empty
+    const initial = prizes.map(p=>({label: p.label, win: !!p.win}));
+    db.ref("wheelItems").set(initial);
+    return;
+  }
+
+  // Update local prizes array in-place to not break references
+  prizes.length = 0; // clear existing
+  for(let i=0;i<items.length;i++){
+    // Normalize item structure
+    const it = items[i];
+    prizes.push({ label: it.label || "ZONK", win: !!it.win });
+  }
+
+  // Enforce safety: ensure at least one ZONK and one HADIAH exist
+  const hasWin = prizes.some(p=>p.win);
+  const hasLose = prizes.some(p=>!p.win);
+  if(!hasWin || !hasLose){
+    // If missing, attempt to restore a safe default by ensuring first two entries are one lose and one win
+    if(!hasLose) prizes[0].win = false;
+    if(!hasWin){
+      if(prizes.length < 2) prizes.push({label:"CLASS(1)", win:true});
+      else prizes[1].win = true;
     }
-};
+    // persist corrected items back to db to keep consistency
+    const corrected = prizes.map(p=>({label:p.label, win:p.win}));
+    db.ref("wheelItems").set(corrected);
+  } else {
+    // All good: redraw wheel
+    drawWheel();
+    renderWheelListUI(items);
+  }
+});
 
-document.getElementById("saveSettingsBtn").onclick = () => {
-    db.ref("settings").set({
-        status: document.getElementById("admEventStatus").value,
-        maxGlobal: parseInt(document.getElementById("admMaxGlobal").value) || 0,
-        maxPerDevice: parseInt(document.getElementById("admMaxPerDevice").value) || 0
+// Render wheel list UI inside admin area (editable, delete, status)
+function renderWheelListUI(items){
+  const container = document.getElementById("wheelList");
+  container.innerHTML = "";
+  items.forEach((it, idx) => {
+    const div = document.createElement("div");
+    div.className = "wheel-item";
+    // label input
+    const input = document.createElement("input");
+    input.value = it.label || "";
+    input.placeholder = "Nama hadiah";
+    input.addEventListener("change", ()=>{
+      // update firebase at index
+      db.ref("wheelItems").once("value").then(snap=>{
+        const arr = snap.val() || [];
+        if(!Array.isArray(arr)) return;
+        arr[idx] = arr[idx] || {};
+        arr[idx].label = input.value || "ZONK";
+        db.ref("wheelItems").set(arr);
+      });
     });
-    alert("Pengaturan Disimpan!");
-};
+    // select status
+    const sel = document.createElement("select");
+    const optWin = document.createElement("option"); optWin.value="win"; optWin.text="HADIAH";
+    const optLose = document.createElement("option"); optLose.value="lose"; optLose.text="ZONK";
+    sel.appendChild(optWin); sel.appendChild(optLose);
+    sel.value = (it.win ? "win" : "lose");
+    sel.addEventListener("change", ()=>{
+      db.ref("wheelItems").once("value").then(snap=>{
+        const arr = snap.val() || [];
+        if(!Array.isArray(arr)) return;
+        arr[idx] = arr[idx] || {};
+        arr[idx].win = (sel.value === "win");
+        // Ensure we don't remove all wins or all loses
+        const newArr = arr.map(a=>({label: a.label||"ZONK", win: !!a.win}));
+        const hasWin = newArr.some(a=>a.win);
+        const hasLose = newArr.some(a=>!a.win);
+        if(!hasWin || !hasLose){
+          alert("Wheel harus memiliki minimal 1 ZONK dan 1 HADIAH. Perubahan dibatalkan.");
+          // revert select to original
+          sel.value = (it.win ? "win" : "lose");
+          return;
+        }
+        db.ref("wheelItems").set(newArr);
+      });
+    });
 
-document.getElementById("addWheelBtn").onclick = () => {
-    const label = document.getElementById("newLabel").value;
-    const type = document.getElementById("newType").value;
-    if(label) db.ref("wheel").push({ label, type });
-};
+    // delete button
+    const delBtn = document.createElement("button");
+    delBtn.innerText = "Hapus";
+    delBtn.addEventListener("click", ()=>{
+      if(!confirm("Hapus item wheel ini?")) return;
+      db.ref("wheelItems").once("value").then(snap=>{
+        const arr = snap.val() || [];
+        if(!Array.isArray(arr)) return;
+        if(arr.length <= 1){
+          alert("Tidak bisa menghapus. Wheel harus memiliki minimal 1 item.");
+          return;
+        }
+        // check if deletion would remove all wins or all loses
+        const newArr = arr.slice(0, idx).concat(arr.slice(idx+1));
+        const hasWin = newArr.some(a=>a && a.win);
+        const hasLose = newArr.some(a=>!(a && a.win));
+        if(!hasWin || !hasLose){
+          alert("Tidak bisa menghapus item ini karena akan menghilangkan semua ZONK atau semua HADIAH.");
+          return;
+        }
+        db.ref("wheelItems").set(newArr);
+      });
+    });
 
-function deleteWheel(id) {
-    if(confirm("Hapus slot ini?")) db.ref("wheel/" + id).remove();
+    div.appendChild(input);
+    div.appendChild(sel);
+    div.appendChild(delBtn);
+    container.appendChild(div);
+  });
+
+  if(items.length === 0){
+    container.innerHTML = "<i>Tidak ada item wheel</i>";
+  }
 }
 
-document.getElementById("resetCodesBtn").onclick = () => {
-    if(confirm("Restart semua redeem code?")) {
-        db.ref("used_codes").remove();
-        alert("Semua kode bisa digunakan kembali!");
-    }
-};
-
-document.getElementById("resetEventBtn").onclick = () => {
-    if(confirm("PERINGATAN: Ini akan menghapus semua data pemenang dan mematikan event!")) {
-        db.ref("winners").remove();
-        db.ref("settings/status").set("OFF");
-        location.reload();
-    }
-};
-
-// Initial Setup (Jika database kosong)
-db.ref("wheel").once("value", s => {
-    if(!s.exists()){
-        db.ref("wheel").push({label: "ZONK", type: "ZONK"});
-        db.ref("wheel").push({label: "HADIAH 1", type: "HADIAH"});
-    }
+// Add new wheel item via admin
+document.getElementById("addWheelItemBtn").addEventListener("click", ()=>{
+  const label = (document.getElementById("newWheelLabel").value || "").trim();
+  const type = document.getElementById("newWheelType").value;
+  if(!label) return alert("Masukkan nama hadiah");
+  const isWin = (type === "win");
+  wheelItemsRef.once("value").then(snap=>{
+    const arr = snap.val() || [];
+    if(!Array.isArray(arr)) arr = [];
+    arr.push({label: label, win: isWin});
+    db.ref("wheelItems").set(arr);
+    document.getElementById("newWheelLabel").value = "";
+  });
 });
-db.ref("codes/REZZKY").set(5); // Default code: REZZKY (+5 spin)
 
+// ================= REALTIME INFO & WINNERS =================
+const infoBoardRef = db.ref("infoBoard");
+infoBoardRef.on("value", snapshot => {
+  const info = snapshot.val() || "Belum ada info event";
+  document.getElementById("infoBoard").innerHTML = "<b>INFO EVENT:</b><br>" + info;
+});
+
+const winnersRef = db.ref("winners");
+winnersRef.on("value", snapshot => {
+  const winners = snapshot.val() || [];
+  if(winners.length === 0){
+    document.getElementById("globalWinners").innerHTML = "<b>Pemenang:</b><br>Belum ada pemenang";
+  } else {
+    let html = "<b>Pemenang:</b><br>";
+    winners.forEach((w, i) => {
+      html += `${i+1}. ${w.name} - ${w.prize} (${w.time})<br>`;
+    });
+    document.getElementById("globalWinners").innerHTML = html;
+  }
+});
+
+updateInfo();
 </script>
 </body>
-</html>
+     </html>
