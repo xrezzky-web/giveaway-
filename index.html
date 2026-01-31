@@ -40,7 +40,6 @@ input,button,select,textarea{
  font-size:14px;
 }
 button{
- background:#00ffd5;
  font-weight:bold;
  cursor:pointer;
 }
@@ -119,34 +118,42 @@ small{
 #adminPanel button, #adminPanel textarea, #adminPanel input{
  margin-top:5px;
 }
-#redeemBtn{
- position:absolute;
- right:10px;
- top:50%;
- transform:translateY(-50%);
- padding:8px 12px;
- font-size:12px;
- border-radius:6px;
- background:#ff6f61;
- cursor:pointer;
-}
+/* tambahan layout kode + redeem */
 .codeContainer{
- position:relative;
+ display:flex;
  width:100%;
+ margin-top:10px;
+}
+#code{
+ flex:1;
+ padding:10px;
+ border-radius:8px;
+ border:none;
+ font-size:14px;
+}
+#redeemBtn{
+ margin-left:8px;
+ padding:10px 16px;
+ border-radius:8px;
+ background:#ff6f61;
+ color:#fff;
+ font-weight:bold;
+ cursor:pointer;
 }
 </style>
 </head>
 <body>
 <div class="box">
-<h2 id="title">XREZZKYSTORE</h2>
+<h2 id="title">XREZZKY STORE</h2>
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
+
+<input id="name" placeholder="Nama (1x saja)">
 
 <div class="codeContainer">
  <input id="code" placeholder="Kode tambahan spin (opsional)">
  <button id="redeemBtn">Redeem</button>
 </div>
 
-<input id="name" placeholder="Nama (1x saja)">
 <button id="spinBtn">🌀 SPIN RNG</button>
 
 <div id="wheelBox">
@@ -166,9 +173,9 @@ small{
  <b>🔒 ADMIN PANEL</b>
  <textarea id="adminInfo" placeholder="Tulis info event disini..."></textarea>
  <button id="updateInfoBtn">💾 Update Info Event</button>
- <input id="newPrizeLabel" placeholder="Nama hadiah baru">
- <input id="newPrizeWin" placeholder="Menang? true/false">
- <button id="addPrizeBtn">➕ Tambah Slot Hadiah</button>
+ <input id="newCode" placeholder="Kode Baru">
+ <input id="newCodeSpin" placeholder="Spin tambahan">
+ <button id="addCodeBtn">➕ Tambah Code</button>
  <input id="maxSpinDevice" placeholder="Max Spin Per Device">
  <input id="maxWinDevice" placeholder="Max Hadiah Per Device">
  <input id="maxWinnerGlobal" placeholder="Max Pemenang Global">
@@ -188,10 +195,7 @@ const ADMIN_WA="6288293064112";
 let MAX_SPIN_PER_USER = 0;
 let MAX_WIN_PER_DEVICE = 2;
 let MAX_WINNER_GLOBAL = 10;
-let FREE_SPIN_NEW_USER = 5;
-let FREE_SPIN_ACTIVE = true;
-let WIN_CHANCE=0.1;
-let prizes=[
+const prizes=[
  {label:"ZONK",win:false},
  {label:"CLASS(1)",win:true},
  {label:"ZONK",win:false},
@@ -200,6 +204,7 @@ let prizes=[
  {label:"TRAIN(1)+CLASS(1)",win:true}
 ];
 let CODES={ XREZ1:1, XREZ3:3, VIP5:5, MEMBER50:50};
+let WIN_CHANCE=0.1;
 
 // ================= FIREBASE =================
 const firebaseConfig = {
@@ -216,7 +221,7 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 
 // ================= STORAGE =================
-const deviceId=localStorage.getItem("devId")||(()=>{
+const deviceId=localStorage.getItem("devId") || (()=>{ 
  const id="dev-"+Math.random().toString(36).slice(2);
  localStorage.setItem("devId",id);
  return id;
@@ -229,9 +234,10 @@ let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
 let lastPrize=null;
 
 // ============ FREE SPIN USER BARU ============
+const FREE_SPIN_NEW_USER = 5;
 if(!spinData[deviceId]) spinData[deviceId]=0;
-if(!localStorage.getItem("claimedFree") && FREE_SPIN_ACTIVE){
- spinData[deviceId]+=FREE_SPIN_NEW_USER;
+if(!localStorage.getItem("claimedFree")){
+ spinData[deviceId] += FREE_SPIN_NEW_USER;
  localStorage.setItem("claimedFree","yes");
 }
 
@@ -276,16 +282,21 @@ function saveData(){
  localStorage.setItem("totalSpin",totalSpin);
 }
 
-// ================= GLOBAL WINNERS & INFO =================
-const globalEl=document.getElementById("globalWinners");
-const infoBoard=document.getElementById("infoBoard");
-db.ref("winners").on("value", snapshot=>{
- const data = snapshot.val()||[];
- globalEl.innerHTML=data.length===0?"<b>Pemenang:</b><br>Belum ada pemenang":"<b>Pemenang:</b><br>"+data.map(w=>`${w.name} → ${w.prize} (${w.time})`).join("<br>");
-});
-db.ref("infoBoard").on("value", snapshot=>{
- const info = snapshot.val()||"Belum ada info event";
- infoBoard.innerHTML="<b>INFO EVENT:</b><br>"+info;
+// ================= REDEEM CODE =================
+document.getElementById("redeemBtn").addEventListener("click",()=>{
+ const codeInput=document.getElementById("code");
+ const code=codeInput.value.trim().toUpperCase();
+ if(!code) return alert("Masukkan kode terlebih dahulu!");
+ const key=deviceId+"_"+code;
+ if(CODES[code] && !usedCodes[key]){
+   spinData[deviceId] += CODES[code];
+   usedCodes[key]=true;
+   saveData();
+   updateInfo();
+   codeInput.value="";
+   alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
+ } else if(usedCodes[key]) alert("⚠️ Kode sudah digunakan!");
+ else alert("⚠️ Kode tidak valid!");
 });
 
 // ================= SPIN =================
@@ -298,6 +309,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
  totalSpin++;
 
+ if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  spinData[deviceId]--;
  saveData();
  updateInfo();
@@ -306,7 +318,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
   const winnersData=snapshot.val()||[];
   if(winnersData.length>=MAX_WINNER_GLOBAL){ alert("Event telah selesai, tunggu event mendatang."); return; }
 
-  // Tentukan prize
   let idx;
   const winPrizes=prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
   const losePrizes=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
@@ -349,24 +360,8 @@ document.getElementById("claimBtn").addEventListener("click",()=>{
  window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
 });
 
-// ================= REDEEM CODE =================
-document.getElementById("redeemBtn").addEventListener("click",()=>{
- const code=document.getElementById("code").value.trim().toUpperCase();
- if(!code) return alert("Masukkan kode!");
- if(CODES[code]){
-   const key=deviceId+"_"+code;
-   if(!usedCodes[key]){
-     spinData[deviceId]+=CODES[code];
-     usedCodes[key]=true;
-     saveData();
-     updateInfo();
-     alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
-   } else alert(`⚠️ Code ${code} sudah digunakan!`);
- } else alert("Kode tidak valid!");
- document.getElementById("code").value="";
-});
-
-// ================= ADMIN PANEL =================
+// ================= ADMIN =================
+// tetap sama, tidak dirubah
 let tap=0;
 document.getElementById("title").addEventListener("click",()=>{
  tap++;
@@ -376,46 +371,59 @@ document.getElementById("title").addEventListener("click",()=>{
   tap=0;
  }
 });
-
-// Update info event
 document.getElementById("updateInfoBtn").addEventListener("click",()=>{
  const info=document.getElementById("adminInfo").value.trim();
  db.ref("infoBoard").set(info);
  alert("Info event diperbarui!");
 });
-
-// Tambah hadiah baru / rod slot
-document.getElementById("addPrizeBtn").addEventListener("click",()=>{
- const label=document.getElementById("newPrizeLabel").value.trim();
- const win=document.getElementById("newPrizeWin").value.trim().toLowerCase()==="true";
- if(label){ prizes.push({label:label,win:win}); drawWheel(); alert(`Hadiah ${label} ditambahkan!`);}
- else alert("Isi nama hadiah dan menang true/false");
+document.getElementById("addCodeBtn").addEventListener("click",()=>{
+ const newCode=document.getElementById("newCode").value.trim().toUpperCase();
+ const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
+ if(newCode && spin>0){ CODES[newCode]=spin; alert(`Code ${newCode} ditambahkan! Spin +${spin}`);}
+ else alert("Masukkan kode dan spin dengan benar.");
 });
-
-// Update max spin & max hadiah & max pemenang
 document.getElementById("maxSpinDevice").addEventListener("change",()=>{
- MAX_SPIN_PER_USER=parseInt(document.getElementById("maxSpinDevice").value)||0;
- alert(`Max spin per device diubah menjadi ${MAX_SPIN_PER_USER}`);
+ const v=parseInt(document.getElementById("maxSpinDevice").value)||0;
+ MAX_SPIN_PER_USER=v;
+ alert(`Max spin per device diubah menjadi ${v}`);
 });
 document.getElementById("maxWinDevice").addEventListener("change",()=>{
- MAX_WIN_PER_DEVICE=parseInt(document.getElementById("maxWinDevice").value)||0;
- alert(`Max hadiah per device diubah menjadi ${MAX_WIN_PER_DEVICE}`);
+ const v=parseInt(document.getElementById("maxWinDevice").value)||0;
+ MAX_WIN_PER_DEVICE=v;
+ alert(`Max hadiah per device diubah menjadi ${v}`);
 });
 document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{
- MAX_WINNER_GLOBAL=parseInt(document.getElementById("maxWinnerGlobal").value)||0;
- alert(`Max pemenang global diubah menjadi ${MAX_WINNER_GLOBAL}`);
+ const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0;
+ MAX_WINNER_GLOBAL=v;
+ alert(`Max pemenang global diubah menjadi ${v}`);
 });
-
-// Reset spin semua user
 document.getElementById("resetSpinBtn").addEventListener("click",()=>{
- if(confirm("Reset spin semua user?")){ localStorage.clear(); location.reload();}
+ if(confirm("Reset spin semua user?")){
+   localStorage.clear();
+   location.reload();
+ }
 });
-// Reset pemenang
-document.getElementById("restartWinnersBtn").addEventListener("click",()=>{ if(confirm("Reset data pemenang?")) db.ref("winners").set([]);});
-// Export pemenang
-document.getElementById("exportBtn").addEventListener("click",()=>{ db.ref("winners").once("value").then(snapshot=>{ const data = snapshot.val()||[]; if(data.length===0) return alert("Belum ada pemenang"); let t="DAFTAR PEMENANG:\n\n"; data.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize} (${w.time})\n`); alert(t); });});
-// Hapus semua
-document.getElementById("resetBtn").addEventListener("click",()=>{ if(confirm("Hapus semua user dan pemenang?")){ db.ref("winners").set([]); localStorage.clear(); location.reload(); }});
+document.getElementById("restartWinnersBtn").addEventListener("click",()=>{
+ if(confirm("Reset data pemenang?")){
+   db.ref("winners").set([]);
+ }
+});
+document.getElementById("exportBtn").addEventListener("click",()=>{
+ db.ref("winners").once("value").then(snapshot=>{
+  const data = snapshot.val() || [];
+  if(data.length===0) return alert("Belum ada pemenang");
+  let t="DAFTAR PEMENANG:\n\n";
+  data.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize} (${w.time})\n`);
+  alert(t);
+ });
+});
+document.getElementById("resetBtn").addEventListener("click",()=>{
+ if(confirm("Hapus semua user dan pemenang?")){
+   db.ref("winners").set([]);
+   localStorage.clear();
+   location.reload();
+ }
+});
 
 updateInfo();
 </script>
