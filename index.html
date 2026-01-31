@@ -101,6 +101,18 @@ button{
  border:1px solid #00ffd5;
  max-height:120px;
 }
+#exportStatus{
+ margin-top:6px;
+ font-size:12px;
+ color:#00ffd5;
+ text-align:center;
+}
+#winnersStatus{
+ margin-top:6px;
+ font-size:13px;
+ color:#ffcc00;
+ text-align:center;
+}
 small{
  color:#aaa;
  margin-top:8px;
@@ -143,6 +155,38 @@ small{
 .wheel-item button{ width:60px; padding:6px; font-size:12px; }
 #eventControls{ display:flex; gap:6px; align-items:center; margin-top:8px; flex-wrap:wrap; }
 #eventStatus{ font-weight:bold; color:#00ffd5; margin-left:6px; }
+
+/* Export modal */
+#exportModal{
+ display:none;
+ position:fixed;
+ left:0;
+ top:0;
+ width:100%;
+ height:100%;
+ background:rgba(0,0,0,0.6);
+ z-index:9999;
+ align-items:center;
+ justify-content:center;
+}
+#exportContent{
+ width:320px;
+ background:#071414;
+ border:1px solid #00ffd5;
+ padding:12px;
+ border-radius:10px;
+ color:#fff;
+}
+#exportContent textarea{
+ height:180px;
+ background:#000;
+ color:#fff;
+ padding:8px;
+ font-size:13px;
+ border-radius:6px;
+}
+#exportButtons{ display:flex; gap:8px; margin-top:8px; }
+#exportButtons button{ flex:1; }
 </style>
 </head>
 <body>
@@ -171,6 +215,7 @@ small{
 <div class="log" id="log"></div>
 <div id="infoBoard"><b>INFO EVENT:</b><br>Loading...</div>
 <div id="globalWinners"><b>Pemenang:</b><br>Loading...</div>
+<div id="winnersStatus"></div>
 
 <div id="adminPanel">
  <b>🔒 ADMIN PANEL</b>
@@ -185,6 +230,7 @@ small{
  <button id="resetSpinBtn">♻ Reset Spin Semua User</button>
  <button id="restartWinnersBtn">🔄 Reset Pemenang</button>
  <button id="exportBtn">📤 EXPORT PEMENANG</button>
+ <div id="exportStatus"></div>
  <button id="resetBtn">❌ Hapus Semua (User & Pemenang)</button>
 
  <!-- NEW: Event Controls -->
@@ -205,6 +251,18 @@ small{
  </div>
 
 </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="exportModal">
+ <div id="exportContent">
+   <div style="font-weight:bold;margin-bottom:6px">EXPORT PEMENANG</div>
+   <textarea id="exportArea" readonly></textarea>
+   <div id="exportButtons">
+     <button id="copyExportBtn">Copy Semua</button>
+     <button id="closeExportBtn">Tutup</button>
+   </div>
+ </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -289,26 +347,21 @@ function drawWheel(){
    ctx.fillStyle="#000";
 
    // DYNAMIC FONT SIZE: otomatis mengecil jika teks terlalu panjang untuk slice
-   // Kita tentukan posisi teks pada radius ~50 (sama seperti sebelumnya)
-   // dan batasi lebar teks berdasarkan arc length pada radius teks tersebut.
    const text = prizes[i].label || "";
    const baseFontSize = 12;
    const minFontSize = 8;
-   const textRadius = 50; // jarak dari pusat tempat teks digambar (konsisten dengan posisi sebelumnya)
-   // arc length available di radius textRadius
+   const textRadius = 50; // jarak dari pusat tempat teks digambar
    const availableArcLen = slice * textRadius;
-   // beri padding sedikit
    const maxTextWidth = Math.max(40, Math.min(120, availableArcLen * 0.9));
 
    let fontSize = baseFontSize;
    ctx.font = `bold ${fontSize}px Arial`;
-   // cek ukuran teks dan turunkan font sampai muat atau mencapai minFontSize
    while(ctx.measureText(text).width > maxTextWidth && fontSize > minFontSize){
      fontSize--;
      ctx.font = `bold ${fontSize}px Arial`;
    }
 
-   // Tetap gunakan koordinat yang sama seperti sebelumnya (agar tampilan tidak berubah secara signifikan)
+   // Use same coordinates as before
    ctx.fillText(text,50,5);
    ctx.restore();
  }
@@ -495,13 +548,49 @@ document.getElementById("restartWinnersBtn").addEventListener("click",()=>{if(co
 document.getElementById("exportBtn").addEventListener("click",()=>{
  db.ref("winners").once("value").then(snapshot=>{
   const data = snapshot.val() || [];
-  if(data.length===0) return alert("Belum ada pemenang");
-  let t="DAFTAR PEMENANG:\n\n";
-  data.forEach((w,i)=>t+=`${i+1}. ${w.name} - ${w.prize} (${w.time})\n`);
-  alert(t);
+  if(data.length===0){
+    document.getElementById("exportArea").value = "Belum ada pemenang.";
+  } else {
+    // Build export text with index, name, prize, and time (date & time)
+    let t = "DAFTAR PEMENANG:\n\n";
+    data.forEach((w,i)=>{
+      t += `${i+1}. ${w.name} - ${w.prize} - ${w.time}\n`;
+    });
+    document.getElementById("exportArea").value = t;
+  }
+  // show modal
+  document.getElementById("exportModal").style.display = "flex";
+  // update small status
+  document.getElementById("exportStatus").innerText = `Jumlah pemenang: ${data.length}`;
  });
 });
 document.getElementById("resetBtn").addEventListener("click",()=>{if(confirm("Hapus semua user dan pemenang?")){db.ref("winners").set([]);localStorage.clear();location.reload();}});
+
+// Export modal buttons
+document.getElementById("copyExportBtn").addEventListener("click", ()=>{
+  const text = document.getElementById("exportArea").value || "";
+  if(!text) return alert("Tidak ada yang disalin.");
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=> {
+      alert("Teks pemenang berhasil disalin ke clipboard.");
+    }).catch(()=> {
+      // fallback
+      const ta = document.getElementById("exportArea");
+      ta.select();
+      try { document.execCommand('copy'); alert("Teks pemenang berhasil disalin ke clipboard."); }
+      catch(e){ alert("Gagal menyalin secara otomatis. Silakan salin manual."); }
+    });
+  } else {
+    // fallback
+    const ta = document.getElementById("exportArea");
+    ta.select();
+    try { document.execCommand('copy'); alert("Teks pemenang berhasil disalin ke clipboard."); }
+    catch(e){ alert("Gagal menyalin secara otomatis. Silakan salin manual."); }
+  }
+});
+document.getElementById("closeExportBtn").addEventListener("click", ()=>{
+  document.getElementById("exportModal").style.display = "none";
+});
 
 // ================= NEW ADMIN FEATURES IMPLEMENTATION =================
 
@@ -597,6 +686,7 @@ wheelItemsRef.once("value").then(snap=>{
 });
 
 // Listen realtime for wheelItems changes and sync to local prizes & UI
+wheelItemsRef.on("Value", function(){}); // noop to avoid potential case-sensitivity issues on some platforms
 wheelItemsRef.on("value", snap=>{
   const items = snap.val();
   if(!items || !Array.isArray(items) || items.length === 0){
@@ -648,8 +738,8 @@ function renderWheelListUI(items){
     input.addEventListener("change", ()=>{
       // update firebase at index
       db.ref("wheelItems").once("value").then(snap=>{
-        const arr = snap.val() || [];
-        if(!Array.isArray(arr)) return;
+        let arr = snap.val() || [];
+        if(!Array.isArray(arr)) arr = [];
         arr[idx] = arr[idx] || {};
         arr[idx].label = input.value || "ZONK";
         db.ref("wheelItems").set(arr);
@@ -663,15 +753,15 @@ function renderWheelListUI(items){
     sel.value = (it.win ? "win" : "lose");
     sel.addEventListener("change", ()=>{
       db.ref("wheelItems").once("value").then(snap=>{
-        const arr = snap.val() || [];
-        if(!Array.isArray(arr)) return;
+        let arr = snap.val() || [];
+        if(!Array.isArray(arr)) arr = [];
         arr[idx] = arr[idx] || {};
         arr[idx].win = (sel.value === "win");
         // Ensure we don't remove all wins or all loses
         const newArr = arr.map(a=>({label: a.label||"ZONK", win: !!a.win}));
-        const hasWin = newArr.some(a=>a.win);
-        const hasLose = newArr.some(a=>!a.win);
-        if(!hasWin || !hasLose){
+        const hasWin2 = newArr.some(a=>a.win);
+        const hasLose2 = newArr.some(a=>!a.win);
+        if(!hasWin2 || !hasLose2){
           alert("Wheel harus memiliki minimal 1 ZONK dan 1 HADIAH. Perubahan dibatalkan.");
           // revert select to original
           sel.value = (it.win ? "win" : "lose");
@@ -687,17 +777,17 @@ function renderWheelListUI(items){
     delBtn.addEventListener("click", ()=>{
       if(!confirm("Hapus item wheel ini?")) return;
       db.ref("wheelItems").once("value").then(snap=>{
-        const arr = snap.val() || [];
-        if(!Array.isArray(arr)) return;
+        let arr = snap.val() || [];
+        if(!Array.isArray(arr)) arr = [];
         if(arr.length <= 1){
           alert("Tidak bisa menghapus. Wheel harus memiliki minimal 1 item.");
           return;
         }
         // check if deletion would remove all wins or all loses
         const newArr = arr.slice(0, idx).concat(arr.slice(idx+1));
-        const hasWin = newArr.some(a=>a && a.win);
-        const hasLose = newArr.some(a=>!(a && a.win));
-        if(!hasWin || !hasLose){
+        const hasWin3 = newArr.some(a=>a && a.win);
+        const hasLose3 = newArr.some(a=>!(a && a.win));
+        if(!hasWin3 || !hasLose3){
           alert("Tidak bisa menghapus item ini karena akan menghilangkan semua ZONK atau semua HADIAH.");
           return;
         }
@@ -723,7 +813,7 @@ document.getElementById("addWheelItemBtn").addEventListener("click", ()=>{
   if(!label) return alert("Masukkan nama hadiah");
   const isWin = (type === "win");
   wheelItemsRef.once("value").then(snap=>{
-    const arr = snap.val() || [];
+    let arr = snap.val() || [];
     if(!Array.isArray(arr)) arr = [];
     arr.push({label: label, win: isWin});
     db.ref("wheelItems").set(arr);
@@ -750,6 +840,16 @@ winnersRef.on("value", snapshot => {
     });
     document.getElementById("globalWinners").innerHTML = html;
   }
+
+  // Show status when max pemenang tercapai (but spins still allowed resulting in ZONK)
+  if(winners.length >= MAX_WINNER_GLOBAL && MAX_WINNER_GLOBAL > 0){
+    document.getElementById("winnersStatus").innerText = "⚠️ Pemenang telah tercapai. Event tidak menerima pemenang baru, peserta masih dapat spin namun hasil akan ZONK.";
+  } else {
+    document.getElementById("winnersStatus").innerText = "";
+  }
+
+  // Update exportStatus with current count
+  document.getElementById("exportStatus").innerText = `Jumlah pemenang sekarang: ${winners.length}`;
 });
 
 updateInfo();
