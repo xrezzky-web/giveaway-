@@ -404,6 +404,27 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
 });
 document.getElementById("resetBtn").addEventListener("click",()=>{if(confirm("Hapus semua user dan pemenang?")){db.ref("winners").set([]);localStorage.clear();location.reload();}});
 
+// ================= REALTIME INFO & WINNERS =================
+const infoBoardRef = db.ref("infoBoard");
+infoBoardRef.on("value", snapshot => {
+  const info = snapshot.val() || "Belum ada info event";
+  document.getElementById("infoBoard").innerHTML = "<b>INFO EVENT:</b><br>" + info;
+});
+
+const winnersRef = db.ref("winners");
+winnersRef.on("value", snapshot => {
+  const winners = snapshot.val() || [];
+  if(winners.length === 0){
+    document.getElementById("globalWinners").innerHTML = "<b>Pemenang:</b><br>Belum ada pemenang";
+  } else {
+    let html = "<b>Pemenang:</b><br>";
+    winners.forEach((w, i) => {
+      html += `${i+1}. ${w.name} - ${w.prize} (${w.time})<br>`;
+    });
+    document.getElementById("globalWinners").innerHTML = html;
+  }
+});
+
 updateInfo();
 </script>
 </body>
