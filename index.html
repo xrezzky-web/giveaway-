@@ -153,6 +153,7 @@ small{
 .wheel-item input{ flex:1; padding:6px; font-size:13px; }
 .wheel-item select{ width:110px; }
 .wheel-item button{ width:60px; padding:6px; font-size:12px; }
+.wheel-item .weight{ width:70px; }
 #eventControls{ display:flex; gap:6px; align-items:center; margin-top:8px; flex-wrap:wrap; }
 #eventStatus{ font-weight:bold; color:#00ffd5; margin-left:6px; }
 
@@ -247,6 +248,7 @@ small{
    <div id="wheelList">Loading...</div>
    <input id="newWheelLabel" placeholder="Nama hadiah baru">
    <select id="newWheelType"><option value="win">HADIAH</option><option value="lose">ZONK</option></select>
+   <input id="newWheelWeight" placeholder="Weight (angka)" />
    <button id="addWheelItemBtn">➕ Tambah Item Wheel</button>
  </div>
 
@@ -383,6 +385,22 @@ function saveData(){
  localStorage.setItem("totalSpin",totalSpin);
 }
 
+// Weighted choice helper: choose one index from array of indices using prize weights
+function weightedChoiceIndex(indices){
+  if(!indices || indices.length===0) return null;
+  const weights = indices.map(i => {
+    const w = parseInt(prizes[i].weight);
+    return (isNaN(w) || w <= 0) ? 1 : w;
+  });
+  const total = weights.reduce((a,b)=>a+b,0);
+  let r = Math.random()*total;
+  for(let k=0;k<indices.length;k++){
+    r -= weights[k];
+    if(r < 0) return indices[k];
+  }
+  return indices[indices.length-1];
+}
+
 // ================= SPIN =================
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
@@ -404,7 +422,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
   db.ref("deviceWins/"+deviceId).once("value").then(dwSnap=>{
     const deviceWinsCount = dwSnap.val() || 0;
 
-    // Determine if we must force ZONK due to event off or limits
+    // Determine available indices
     const winPrizes=prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
     const losePrizes=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
 
@@ -419,15 +437,23 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
 
     let idx;
     if(forceZonk || hasWon){
-      // always pick a lose prize
-      idx = losePrizes[Math.floor(Math.random()*losePrizes.length)];
+      // weighted choose among losePrizes
+      idx = weightedChoiceIndex(losePrizes);
+      if(idx === null) idx = losePrizes[Math.floor(Math.random()*losePrizes.length)];
     } else {
       // normal operation (event on and within limits)
-      idx = Math.random()<WIN_CHANCE ? winPrizes[Math.floor(Math.random()*winPrizes.length)] : losePrizes[Math.floor(Math.random()*losePrizes.length)];
+      if(Math.random() < WIN_CHANCE && winPrizes.length > 0){
+        idx = weightedChoiceIndex(winPrizes);
+        // double-check idx validity
+        if(idx === null) idx = winPrizes[Math.floor(Math.random()*winPrizes.length)];
+      } else {
+        idx = weightedChoiceIndex(losePrizes);
+        if(idx === null) idx = losePrizes[Math.floor(Math.random()*losePrizes.length)];
+      }
       // additionally, even if randomly picked a winning prize, double-check limits
       if(prizes[idx].win){
         if(winnersData.length >= MAX_WINNER_GLOBAL || deviceWinsCount >= MAX_WIN_PER_DEVICE || !EVENT_ON){
-          idx = losePrizes[Math.floor(Math.random()*losePrizes.length)];
+          idx = weightedChoiceIndex(losePrizes) || losePrizes[Math.floor(Math.random()*losePrizes.length)];
         }
       }
     }
@@ -656,8 +682,8 @@ document.getElementById("resetCodesBtn").addEventListener("click", ()=>{
 const wheelItemsRef = db.ref("wheelItems");
 wheelItemsRef.once("value").then(snap=>{
   if(!snap.exists()){
-    // initialize from current prizes
-    const initial = prizes.map(p=>({label: p.label, win: !!p.win}));
+    // initialize from current prizes, include weight default 1
+    const initial = prizes.map(p=>({label: p.label, win: !!p.win, weight: 1}));
     db.ref("wheelItems").set(initial);
   }
 });
@@ -667,7 +693,7 @@ wheelItemsRef.on("value", snap=>{
   const items = snap.val();
   if(!items || !Array.isArray(items) || items.length === 0){
     // fallback: keep existing prizes but ensure wheelItems in DB not empty
-    const initial = prizes.map(p=>({label: p.label, win: !!p.win}));
+    const initial = prizes.map(p=>({label: p.label, win: !!p.win, weight: 1}));
     db.ref("wheelItems").set(initial);
     return;
   }
@@ -675,9 +701,9 @@ wheelItemsRef.on("value", snap=>{
   // Update local prizes array in-place to not break references
   prizes.length = 0; // clear existing
   for(let i=0;i<items.length;i++){
-    // Normalize item structure
-    const it = items[i];
-    prizes.push({ label: it.label || "ZONK", win: !!it.win });
+    // Normalize item structure and include weight
+    const it = items[i] || {};
+    prizes.push({ label: it.label || "ZONK", win: !!it.win, weight: (typeof it.weight !== "undefined" ? parseInt(it.weight) : 1) });
   }
 
   // Enforce safety: ensure at least one ZONK and one HADIAH exist
@@ -687,11 +713,11 @@ wheelItemsRef.on("value", snap=>{
     // If missing, attempt to restore a safe default by ensuring first two entries are one lose and one win
     if(!hasLose) prizes[0].win = false;
     if(!hasWin){
-      if(prizes.length < 2) prizes.push({label:"CLASS(1)", win:true});
+      if(prizes.length < 2) prizes.push({label:"CLASS(1)", win:true, weight:1});
       else prizes[1].win = true;
     }
     // persist corrected items back to db to keep consistency
-    const corrected = prizes.map(p=>({label:p.label, win:p.win}));
+    const corrected = prizes.map(p=>({label:p.label, win:p.win, weight: (typeof p.weight !== "undefined" ? p.weight : 1)}));
     db.ref("wheelItems").set(corrected);
   } else {
     // All good: redraw wheel
@@ -721,6 +747,26 @@ function renderWheelListUI(items){
         db.ref("wheelItems").set(arr);
       });
     });
+
+    // weight input
+    const weightInput = document.createElement("input");
+    weightInput.type = "number";
+    weightInput.min = "1";
+    weightInput.className = "weight";
+    weightInput.value = (typeof it.weight !== "undefined" ? it.weight : 1);
+    weightInput.title = "Weight (angka > 0)";
+    weightInput.addEventListener("change", ()=>{
+      wheelItemsRef.once("value").then(snap=>{
+        let arr = snap.val() || [];
+        if(!Array.isArray(arr)) arr = [];
+        arr[idx] = arr[idx] || {};
+        let w = parseInt(weightInput.value);
+        if(isNaN(w) || w <= 0) w = 1;
+        arr[idx].weight = w;
+        db.ref("wheelItems").set(arr);
+      });
+    });
+
     // select status
     const sel = document.createElement("select");
     const optWin = document.createElement("option"); optWin.value="win"; optWin.text="HADIAH";
@@ -734,7 +780,7 @@ function renderWheelListUI(items){
         arr[idx] = arr[idx] || {};
         arr[idx].win = (sel.value === "win");
         // Ensure we don't remove all wins or all loses
-        const newArr = arr.map(a=>({label: a.label||"ZONK", win: !!a.win}));
+        const newArr = arr.map(a=>({label: a.label||"ZONK", win: !!a.win, weight: (typeof a.weight !== "undefined" ? a.weight : 1)}));
         const hasWin2 = newArr.some(a=>a.win);
         const hasLose2 = newArr.some(a=>!a.win);
         if(!hasWin2 || !hasLose2){
@@ -772,6 +818,7 @@ function renderWheelListUI(items){
     });
 
     div.appendChild(input);
+    div.appendChild(weightInput);
     div.appendChild(sel);
     div.appendChild(delBtn);
     container.appendChild(div);
@@ -786,14 +833,17 @@ function renderWheelListUI(items){
 document.getElementById("addWheelItemBtn").addEventListener("click", ()=>{
   const label = (document.getElementById("newWheelLabel").value || "").trim();
   const type = document.getElementById("newWheelType").value;
+  let weightVal = parseInt(document.getElementById("newWheelWeight").value);
+  if(isNaN(weightVal) || weightVal <= 0) weightVal = 1;
   if(!label) return alert("Masukkan nama hadiah");
   const isWin = (type === "win");
   wheelItemsRef.once("value").then(snap=>{
     let arr = snap.val() || [];
     if(!Array.isArray(arr)) arr = [];
-    arr.push({label: label, win: isWin});
+    arr.push({label: label, win: isWin, weight: weightVal});
     db.ref("wheelItems").set(arr);
     document.getElementById("newWheelLabel").value = "";
+    document.getElementById("newWheelWeight").value = "";
   });
 });
 
