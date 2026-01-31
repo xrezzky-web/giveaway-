@@ -123,7 +123,7 @@ small{
 </head>
 <body>
 <div class="box">
-<h2 id="title">XREZZKYSTORE</h2>
+<h2 id="title">XREZZKY STORE</h2>
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
 <input id="name" placeholder="Nama (1x saja)">
@@ -166,7 +166,7 @@ small{
 // ================= CONFIG =================
 const ADMIN_PIN="XREZZKY STORE0930";
 const ADMIN_WA="6288293064112";
-let MAX_SPIN_PER_USER = 0; // spin awal dari kode/admin
+let MAX_SPIN_PER_USER = 0;
 let MAX_WIN_PER_DEVICE = 2;
 let MAX_WINNER_GLOBAL = 10;
 const prizes=[
@@ -215,6 +215,7 @@ if(!localStorage.getItem("claimedFree") && FREE_SPIN_ACTIVE){
  spinData[deviceId] += FREE_SPIN_NEW_USER;
  localStorage.setItem("claimedFree","yes");
 }
+
 if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
 
 // ================= DRAW WHEEL =================
@@ -276,7 +277,7 @@ db.ref("infoBoard").on("value", snapshot=>{
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
- if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
+ if(!spinData[deviceId] || spinData[deviceId]<=0) return alert("Spin kamu habis!");
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
@@ -288,7 +289,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  if(code && CODES[code]){
    const key=deviceId+"_"+code;
    if(!usedCodes[key]){
-     spinData[deviceId]+=CODES[code];
+     spinData[deviceId] = (spinData[deviceId]||0) + CODES[code];
      usedCodes[key]=true;
      saveData();
      updateInfo();
@@ -297,7 +298,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
    } else alert(`⚠️ Code ${code} sudah digunakan!`);
  }
 
- if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  spinData[deviceId]--;
  saveData();
  updateInfo();
@@ -306,7 +306,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
   const winnersData=snapshot.val()||[];
   if(winnersData.length>=MAX_WINNER_GLOBAL){ alert("Event telah selesai, tunggu event mendatang."); return; }
 
-  // Tentukan prize
   let idx;
   const winPrizes=prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
   const losePrizes=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
@@ -360,24 +359,19 @@ document.getElementById("title").addEventListener("click",()=>{
  }
 });
 
-// Update info event
 document.getElementById("updateInfoBtn").addEventListener("click",()=>{
  const info=document.getElementById("adminInfo").value.trim();
  db.ref("infoBoard").set(info);
  alert("Info event diperbarui!");
 });
 
-// Tambah kode baru
 document.getElementById("addCodeBtn").addEventListener("click",()=>{
  const newCode=document.getElementById("newCode").value.trim().toUpperCase();
  const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
- if(newCode && spin>0){
-   CODES[newCode]=spin;
-   alert(`Code ${newCode} ditambahkan! Spin +${spin}`);
- } else alert("Masukkan kode dan spin dengan benar.");
+ if(newCode && spin>0){ CODES[newCode]=spin; alert(`Code ${newCode} ditambahkan! Spin +${spin}`);}
+ else alert("Masukkan kode dan spin dengan benar.");
 });
 
-// Update max spin & max hadiah & max pemenang
 document.getElementById("maxSpinDevice").addEventListener("change",()=>{
  const v=parseInt(document.getElementById("maxSpinDevice").value)||0;
  MAX_SPIN_PER_USER=v;
@@ -394,22 +388,17 @@ document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{
  alert(`Max pemenang global diubah menjadi ${v}`);
 });
 
-// Reset spin semua user
 document.getElementById("resetSpinBtn").addEventListener("click",()=>{
  if(confirm("Reset spin semua user?")){
    localStorage.clear();
    location.reload();
  }
 });
-
-// Reset pemenang
 document.getElementById("restartWinnersBtn").addEventListener("click",()=>{
  if(confirm("Reset data pemenang?")){
    db.ref("winners").set([]);
  }
 });
-
-// Export pemenang
 document.getElementById("exportBtn").addEventListener("click",()=>{
  db.ref("winners").once("value").then(snapshot=>{
   const data = snapshot.val() || [];
@@ -419,8 +408,6 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
   alert(t);
  });
 });
-
-// Hapus semua user & pemenang
 document.getElementById("resetBtn").addEventListener("click",()=>{
  if(confirm("Hapus semua user dan pemenang?")){
    db.ref("winners").set([]);
