@@ -43,6 +43,10 @@ button{
  font-weight:bold;
  cursor:pointer;
 }
+#spinBtn{
+ background:#00ffd5;
+ color:#000;
+}
 #wheelBox{
  position:relative;
  width:280px;
@@ -118,11 +122,13 @@ small{
 #adminPanel button, #adminPanel textarea, #adminPanel input{
  margin-top:5px;
 }
-/* tambahan layout kode + redeem */
+
+/* ================= FIX REDEEM BUTTON ================= */
 .codeContainer{
  display:flex;
  width:100%;
  margin-top:10px;
+ position:relative;
 }
 #code{
  flex:1;
@@ -132,11 +138,15 @@ small{
  font-size:14px;
 }
 #redeemBtn{
- margin-left:8px;
- padding:10px 16px;
+ position:absolute;
+ right:4px;
+ top:50%;
+ transform:translateY(-50%);
+ padding:6px 10px;
+ font-size:12px;
  border-radius:8px;
- background:#ff6f61;
- color:#fff;
+ background:#00ffd5;
+ color:#000;
  font-weight:bold;
  cursor:pointer;
 }
@@ -300,6 +310,7 @@ document.getElementById("redeemBtn").addEventListener("click",()=>{
 });
 
 // ================= SPIN =================
+// tetap seperti HTML lama
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
@@ -309,7 +320,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
  totalSpin++;
 
- if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  spinData[deviceId]--;
  saveData();
  updateInfo();
@@ -351,7 +361,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
     updateInfo();
   },4200);
  });
-});
 
 // ================= CLAIM =================
 document.getElementById("claimBtn").addEventListener("click",()=>{
