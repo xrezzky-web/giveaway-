@@ -465,7 +465,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
                 window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
               } else {
                 // Device limit reached; treat as zonk (do not record)
-                hasWon = hasWon; // no change
               }
             });
           } else {
@@ -539,12 +538,12 @@ document.getElementById("addCodeBtn").addEventListener("click",()=>{
 });
 
 // UPDATE MAX / RESET / EXPORT
-document.getElementById("maxSpinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxSpinDevice").value)||0; MAX_SPIN_PER_USER=v; alert(`Max spin per device diubah menjadi ${v}`);});
-document.getElementById("maxWinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinDevice").value)||0; MAX_WIN_PER_DEVICE=v; alert(`Max hadiah per device diubah menjadi ${v}`);});
-document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0; MAX_WINNER_GLOBAL=v; alert(`Max pemenang global diubah menjadi ${v}`);});
+document.getElementById("maxSpinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxSpinDevice").value)||0; MAX_SPIN_PER_USER=v; db.ref("settings/maxSpinPerUser").set(v); alert(`Max spin per device diubah menjadi ${v}`);});
+document.getElementById("maxWinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinDevice").value)||0; MAX_WIN_PER_DEVICE=v; db.ref("settings/maxWinPerDevice").set(v); alert(`Max hadiah per device diubah menjadi ${v}`);});
+document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0; MAX_WINNER_GLOBAL=v; db.ref("settings/maxWinnerGlobal").set(v); alert(`Max pemenang global diubah menjadi ${v}`);});
 
 document.getElementById("resetSpinBtn").addEventListener("click",()=>{if(confirm("Reset spin semua user?")){localStorage.clear();location.reload();}});
-document.getElementById("restartWinnersBtn").addEventListener("click",()=>{if(confirm("Reset data pemenang?")){db.ref("winners").set([]);}});
+document.getElementById("restartWinnersBtn").addEventListener("click",()=>{if(confirm("Reset data pemenang?")){db.ref("winners").set([]); db.ref("deviceWins").set({});}});
 document.getElementById("exportBtn").addEventListener("click",()=>{
  db.ref("winners").once("value").then(snapshot=>{
   const data = snapshot.val() || [];
@@ -564,7 +563,7 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
   document.getElementById("exportStatus").innerText = `Jumlah pemenang: ${data.length}`;
  });
 });
-document.getElementById("resetBtn").addEventListener("click",()=>{if(confirm("Hapus semua user dan pemenang?")){db.ref("winners").set([]);localStorage.clear();location.reload();}});
+document.getElementById("resetBtn").addEventListener("click",()=>{if(confirm("Hapus semua user dan pemenang?")){db.ref("winners").set([]); db.ref("deviceWins").set({}); localStorage.clear();location.reload();}});
 
 // Export modal buttons
 document.getElementById("copyExportBtn").addEventListener("click", ()=>{
@@ -622,31 +621,10 @@ settingsRef.on("value", snap => {
   }
 });
 
-// When admin changes max inputs, persist to Firebase as well
-document.getElementById("maxSpinDevice").addEventListener("change", ()=>{
-  const v = parseInt(document.getElementById("maxSpinDevice").value) || 0;
-  MAX_SPIN_PER_USER = v;
-  db.ref("settings/maxSpinPerUser").set(v);
-  alert(`Max spin per device diubah menjadi ${v}`);
-});
-document.getElementById("maxWinDevice").addEventListener("change", ()=>{
-  const v = parseInt(document.getElementById("maxWinDevice").value) || 0;
-  MAX_WIN_PER_DEVICE = v;
-  db.ref("settings/maxWinPerDevice").set(v);
-  alert(`Max hadiah per device diubah menjadi ${v}`);
-});
-document.getElementById("maxWinnerGlobal").addEventListener("change", ()=>{
-  const v = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
-  MAX_WINNER_GLOBAL = v;
-  db.ref("settings/maxWinnerGlobal").set(v);
-  alert(`Max pemenang global diubah menjadi ${v}`);
-});
-
 // Toggle event on/off
 document.getElementById("toggleEventBtn").addEventListener("click", ()=>{
   const newState = !EVENT_ON;
   db.ref("settings/eventOn").set(newState);
-  // local update will be handled by the settingsRef listener
   alert(`Event telah di${newState ? "ON" : "OFF"}`);
 });
 
@@ -662,7 +640,6 @@ document.getElementById("resetEventBtn").addEventListener("click", ()=>{
   hasWon = false;
   lastPrize = null;
   localStorage.removeItem("hasWon");
-  // Inform admin
   alert("Event di-reset dan dimatikan. Data pemenang dan hitungan device telah dihapus.");
 });
 
@@ -686,7 +663,6 @@ wheelItemsRef.once("value").then(snap=>{
 });
 
 // Listen realtime for wheelItems changes and sync to local prizes & UI
-wheelItemsRef.on("Value", function(){}); // noop to avoid potential case-sensitivity issues on some platforms
 wheelItemsRef.on("value", snap=>{
   const items = snap.val();
   if(!items || !Array.isArray(items) || items.length === 0){
@@ -737,7 +713,7 @@ function renderWheelListUI(items){
     input.placeholder = "Nama hadiah";
     input.addEventListener("change", ()=>{
       // update firebase at index
-      db.ref("wheelItems").once("value").then(snap=>{
+      wheelItemsRef.once("value").then(snap=>{
         let arr = snap.val() || [];
         if(!Array.isArray(arr)) arr = [];
         arr[idx] = arr[idx] || {};
@@ -752,7 +728,7 @@ function renderWheelListUI(items){
     sel.appendChild(optWin); sel.appendChild(optLose);
     sel.value = (it.win ? "win" : "lose");
     sel.addEventListener("change", ()=>{
-      db.ref("wheelItems").once("value").then(snap=>{
+      wheelItemsRef.once("value").then(snap=>{
         let arr = snap.val() || [];
         if(!Array.isArray(arr)) arr = [];
         arr[idx] = arr[idx] || {};
@@ -776,7 +752,7 @@ function renderWheelListUI(items){
     delBtn.innerText = "Hapus";
     delBtn.addEventListener("click", ()=>{
       if(!confirm("Hapus item wheel ini?")) return;
-      db.ref("wheelItems").once("value").then(snap=>{
+      wheelItemsRef.once("value").then(snap=>{
         let arr = snap.val() || [];
         if(!Array.isArray(arr)) arr = [];
         if(arr.length <= 1){
