@@ -207,16 +207,19 @@ let hasWon=localStorage.getItem("hasWon")==="true";
 let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
 let lastPrize=null;
 
-// ============ FREE SPIN USER BARU ============
+// ================= FREE SPIN BARU USER =================
 const FREE_SPIN_NEW_USER = 5;
-const FREE_SPIN_ACTIVE = true;
 if(!spinData[deviceId]) spinData[deviceId]=0;
-if(!localStorage.getItem("claimedFree") && FREE_SPIN_ACTIVE){
- spinData[deviceId] += FREE_SPIN_NEW_USER;
+if(!localStorage.getItem("claimedFree")){
+ spinData[deviceId]+=FREE_SPIN_NEW_USER;
  localStorage.setItem("claimedFree","yes");
 }
 
-if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
+// Lock nama jika sudah ada
+if(lockedName){ 
+ document.getElementById("name").value=lockedName; 
+ document.getElementById("name").disabled=true; 
+}
 
 // ================= DRAW WHEEL =================
 const canvas=document.getElementById("wheel");
@@ -277,28 +280,27 @@ db.ref("infoBoard").on("value", snapshot=>{
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
- if(!spinData[deviceId] || spinData[deviceId]<=0) return alert("Spin kamu habis!");
+ if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
  const name=document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
- totalSpin++;
 
- // Apply code
+ // ================= APPLY CODE =================
  const codeInput=document.getElementById("code");
  const code=codeInput.value.trim().toUpperCase();
  if(code && CODES[code]){
    const key=deviceId+"_"+code;
    if(!usedCodes[key]){
-     spinData[deviceId] = (spinData[deviceId]||0) + CODES[code];
+     spinData[deviceId]+=CODES[code];
      usedCodes[key]=true;
-     saveData();
-     updateInfo();
-     codeInput.value="";
      alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
+     codeInput.value="";
    } else alert(`⚠️ Code ${code} sudah digunakan!`);
  }
 
+ // ================= SPIN =================
  spinData[deviceId]--;
+ totalSpin++;
  saveData();
  updateInfo();
 
@@ -306,6 +308,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
   const winnersData=snapshot.val()||[];
   if(winnersData.length>=MAX_WINNER_GLOBAL){ alert("Event telah selesai, tunggu event mendatang."); return; }
 
+  // Tentukan prize
   let idx;
   const winPrizes=prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
   const losePrizes=prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
@@ -338,7 +341,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
     saveData();
     updateInfo();
   },4200);
- });
 });
 
 // ================= CLAIM =================
@@ -359,12 +361,14 @@ document.getElementById("title").addEventListener("click",()=>{
  }
 });
 
+// Update info event
 document.getElementById("updateInfoBtn").addEventListener("click",()=>{
  const info=document.getElementById("adminInfo").value.trim();
  db.ref("infoBoard").set(info);
  alert("Info event diperbarui!");
 });
 
+// Tambah kode baru
 document.getElementById("addCodeBtn").addEventListener("click",()=>{
  const newCode=document.getElementById("newCode").value.trim().toUpperCase();
  const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
@@ -372,6 +376,7 @@ document.getElementById("addCodeBtn").addEventListener("click",()=>{
  else alert("Masukkan kode dan spin dengan benar.");
 });
 
+// Update max spin & max hadiah & max pemenang
 document.getElementById("maxSpinDevice").addEventListener("change",()=>{
  const v=parseInt(document.getElementById("maxSpinDevice").value)||0;
  MAX_SPIN_PER_USER=v;
@@ -388,17 +393,22 @@ document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{
  alert(`Max pemenang global diubah menjadi ${v}`);
 });
 
+// Reset spin semua user
 document.getElementById("resetSpinBtn").addEventListener("click",()=>{
  if(confirm("Reset spin semua user?")){
    localStorage.clear();
    location.reload();
  }
 });
+
+// Reset pemenang
 document.getElementById("restartWinnersBtn").addEventListener("click",()=>{
  if(confirm("Reset data pemenang?")){
    db.ref("winners").set([]);
  }
 });
+
+// Export pemenang
 document.getElementById("exportBtn").addEventListener("click",()=>{
  db.ref("winners").once("value").then(snapshot=>{
   const data = snapshot.val() || [];
@@ -408,6 +418,8 @@ document.getElementById("exportBtn").addEventListener("click",()=>{
   alert(t);
  });
 });
+
+// Hapus semua user & pemenang
 document.getElementById("resetBtn").addEventListener("click",()=>{
  if(confirm("Hapus semua user dan pemenang?")){
    db.ref("winners").set([]);
