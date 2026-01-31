@@ -45,12 +45,11 @@ button{
  cursor:pointer;
 }
 #redeemBtn{
- background:#00ffd5;
- font-size:12px;
- padding:6px 10px;
- border-radius:6px;
- margin-top:5px;
- float:right;
+ width:100px;
+ font-size:14px;
+ padding:10px;
+ border-radius:8px;
+ margin-left:10px;
 }
 #wheelBox{
  position:relative;
@@ -127,6 +126,14 @@ small{
 #adminPanel button, #adminPanel textarea, #adminPanel input{
  margin-top:5px;
 }
+.code-wrapper{
+ display:flex;
+ width:100%;
+ align-items:center;
+}
+.code-wrapper input{
+ flex:1;
+}
 </style>
 </head>
 <body>
@@ -135,8 +142,9 @@ small{
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
 <input id="name" placeholder="Nama (1x saja)">
-<div style="width:100%; position:relative;">
- <input id="code" placeholder="Kode tambahan spin (opsional)" style="width:calc(100% - 70px); display:inline-block;">
+
+<div class="code-wrapper">
+ <input id="code" placeholder="Kode tambahan spin (opsional)">
  <button id="redeemBtn">Redeem</button>
 </div>
 
@@ -175,7 +183,7 @@ small{
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-// CONFIG
+// ================= CONFIG =================
 const ADMIN_PIN="XREZZKY STORE0930";
 const ADMIN_WA="6288293064112";
 let MAX_SPIN_PER_USER = 0;
@@ -192,7 +200,7 @@ const prizes=[
 let CODES={};
 let WIN_CHANCE=0.1;
 
-// FIREBASE
+// ================= FIREBASE =================
 const firebaseConfig = {
  apiKey: "AIzaSyD85JE0QCaey1o4AUQtp24aGqNmx3AtbmA",
  authDomain: "xrezzkystore-rng.firebaseapp.com",
@@ -206,7 +214,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 
-// STORAGE
+// ================= STORAGE =================
 const deviceId=localStorage.getItem("devId") || (()=>{ 
  const id="dev-"+Math.random().toString(36).slice(2);
  localStorage.setItem("devId",id);
@@ -233,7 +241,7 @@ db.ref("codes").on("value", snapshot=>{
  CODES = snapshot.val() || {};
 });
 
-// DRAW WHEEL
+// ================= DRAW WHEEL =================
 const canvas=document.getElementById("wheel");
 const ctx=canvas.getContext("2d");
 const c=140;
@@ -257,7 +265,7 @@ function drawWheel(){
 }
 drawWheel();
 
-// UTIL
+// ================= UTIL =================
 function updateInfo(){
  document.getElementById("spinInfo").innerText=
   spinData[deviceId]>0?
@@ -272,7 +280,7 @@ function saveData(){
  localStorage.setItem("totalSpin",totalSpin);
 }
 
-// SPIN
+// ================= SPIN =================
 let rot=0,lock=false;
 document.getElementById("spinBtn").addEventListener("click",()=>{
  if(lock) return;
@@ -282,7 +290,6 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
  totalSpin++;
 
- // SPIN DATA
  spinData[deviceId]--;
  saveData();
  updateInfo();
@@ -326,7 +333,7 @@ document.getElementById("spinBtn").addEventListener("click",()=>{
  });
 });
 
-// REDEEM CODE
+// ================= REDEEM CODE =================
 document.getElementById("redeemBtn").addEventListener("click",()=>{
  const codeInput=document.getElementById("code");
  const code=codeInput.value.trim().toUpperCase();
@@ -344,14 +351,14 @@ document.getElementById("redeemBtn").addEventListener("click",()=>{
  }else alert("⚠️ Kode tidak valid!");
 });
 
-// CLAIM BUTTON
+// ================= CLAIM =================
 document.getElementById("claimBtn").addEventListener("click",()=>{
  if(!lastPrize||!lastPrize.win) return;
  const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`);
  window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
 });
 
-// ADMIN PANEL
+// ================= ADMIN =================
 let tap=0;
 document.getElementById("title").addEventListener("click",()=>{
  tap++;
@@ -362,14 +369,14 @@ document.getElementById("title").addEventListener("click",()=>{
  }
 });
 
-// UPDATE INFO
+// UPDATE INFO EVENT
 document.getElementById("updateInfoBtn").addEventListener("click",()=>{
  const info=document.getElementById("adminInfo").value.trim();
  db.ref("infoBoard").set(info);
  alert("Info event diperbarui!");
 });
 
-// ADD CODE
+// ADD CODE PUBLIK
 document.getElementById("addCodeBtn").addEventListener("click",()=>{
  const newCode=document.getElementById("newCode").value.trim().toUpperCase();
  const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
@@ -379,24 +386,11 @@ document.getElementById("addCodeBtn").addEventListener("click",()=>{
  }else alert("Masukkan kode dan spin dengan benar.");
 });
 
-// MAX SPIN / WIN / GLOBAL
-document.getElementById("maxSpinDevice").addEventListener("change",()=>{
- const v=parseInt(document.getElementById("maxSpinDevice").value)||0;
- MAX_SPIN_PER_USER=v;
- alert(`Max spin per device diubah menjadi ${v}`);
-});
-document.getElementById("maxWinDevice").addEventListener("change",()=>{
- const v=parseInt(document.getElementById("maxWinDevice").value)||0;
- MAX_WIN_PER_DEVICE=v;
- alert(`Max hadiah per device diubah menjadi ${v}`);
-});
-document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{
- const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0;
- MAX_WINNER_GLOBAL=v;
- alert(`Max pemenang global diubah menjadi ${v}`);
-});
+// UPDATE MAX / RESET / EXPORT
+document.getElementById("maxSpinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxSpinDevice").value)||0; MAX_SPIN_PER_USER=v; alert(`Max spin per device diubah menjadi ${v}`);});
+document.getElementById("maxWinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinDevice").value)||0; MAX_WIN_PER_DEVICE=v; alert(`Max hadiah per device diubah menjadi ${v}`);});
+document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0; MAX_WINNER_GLOBAL=v; alert(`Max pemenang global diubah menjadi ${v}`);});
 
-// RESET / EXPORT
 document.getElementById("resetSpinBtn").addEventListener("click",()=>{if(confirm("Reset spin semua user?")){localStorage.clear();location.reload();}});
 document.getElementById("restartWinnersBtn").addEventListener("click",()=>{if(confirm("Reset data pemenang?")){db.ref("winners").set([]);}});
 document.getElementById("exportBtn").addEventListener("click",()=>{
