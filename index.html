@@ -221,6 +221,14 @@ small{
 #publicPanel{ display:none; width:100%; margin-top:12px; background:rgba(0,0,0,0.06); border-radius:8px; padding:10px; box-sizing:border-box; text-align:center; }
 #publicPanel .pub-row{ margin-bottom:6px; }
 #publicWinnersList{ text-align:left; max-height:120px; overflow:auto; padding:6px; background:rgba(0,0,0,0.03); border-radius:6px; }
+
+ /* small improvement for spin button placed below wheel */
+#spinBtn{
+ margin-top:12px;
+ max-width:220px;
+ width:100%;
+ align-self:center;
+}
 </style>
 </head>
 <body>
@@ -235,7 +243,7 @@ small{
  <button id="redeemBtn">Redeem</button>
 </div>
 
-<button id="spinBtn">🌀 SPIN RNG</button>
+<!-- tombol SPIN dipindahkan ke bawah wheel (sesuai permintaan) -->
 
 <!-- NEW: Public event ON/OFF indicator (visible on public page too) -->
 <div id="eventIndicator" aria-live="polite">EVENT: LOADING...</div>
@@ -247,6 +255,9 @@ small{
  <canvas id="wheel" width="280" height="280"></canvas>
  <div id="arrow">⬆️</div>
 </div>
+
+<!-- SPIN button now berada di bawah wheel -->
+<button id="spinBtn">🌀 SPIN RNG</button>
 
 <div id="result"></div>
 <button id="claimBtn">📩 KLAIM HADIAH</button>
@@ -498,6 +509,16 @@ settingsRef.on("value", snap => {
       localStorage.setItem("lastResetAll",String(t));
       lastResetAll = t;
       updateInfo();
+
+      // Juga bersihkan tampilan jadwal / waktu global (atas dan panel publik)
+      try{
+        const esi = document.getElementById("eventScheduleInfo");
+        const et = document.getElementById("eventTimer");
+        if(esi) esi.innerText = "";
+        if(et) et.innerText = "";
+        const pubSch = document.getElementById("publicSchedule");
+        if(pubSch) pubSch.innerText = "";
+      }catch(e){}
     }
   }
 });
@@ -1129,6 +1150,8 @@ document.getElementById("closeExportBtn").addEventListener("click", ()=>{ docume
 db.ref("infoBoard").on("value", snap => {
  const info = snap.val()||"Belum ada info event";
  document.getElementById("infoBoard").innerHTML = "<b>INFO EVENT:</b><br>"+info;
+ // pastikan admin textarea selalu sinkron realtime
+ try{ document.getElementById("adminInfo").value = info; }catch(e){}
 });
 db.ref("winners").on("value", snap => {
  const winners = snap.val()||[];
@@ -1229,6 +1252,20 @@ updateInfo();
       else if(start) pubSchedule.innerText = `Event mulai: ${new Date(start).toLocaleString()}`;
       else if(end) pubSchedule.innerText = `Event berakhir: ${new Date(end).toLocaleString()}`;
       else pubSchedule.innerText = "Waktu event: belum diset";
+    }
+
+    // Jika admin melakukan resetAllTimestamp, bersihkan juga area jadwal di publik dan di atas wheel
+    if(typeof s.resetAllTimestamp !== "undefined"){
+      const t = Number(s.resetAllTimestamp)||0;
+      const lastLocal = parseInt(localStorage.getItem("lastResetAll")||"0",10) || 0;
+      if(t > lastLocal){
+        try{
+          const esi = document.getElementById("eventScheduleInfo"); if(esi) esi.innerText = "";
+          const et = document.getElementById("eventTimer"); if(et) et.innerText = "";
+          const pubSch = document.getElementById("publicSchedule"); if(pubSch) pubSch.innerText = "";
+          localStorage.setItem("lastResetAll", String(t));
+        }catch(e){}
+      }
     }
   });
 
