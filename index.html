@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>XREZZKY STORE RNG GIVEAWAY</title>
+<title>XREZZKYSTORE RNG GIVEAWAY</title>
 <style>
 body{
  margin:0;
@@ -73,6 +73,14 @@ button{
  color:#fff;
  text-shadow:0 0 8px #00ffd5;
  z-index:10;
+}
+#eventIndicator{
+ margin-top:6px;
+ font-size:13px;
+ font-weight:bold;
+ padding:6px 10px;
+ border-radius:8px;
+ text-align:center;
 }
 #eventScheduleInfo{
  margin-top:6px;
@@ -212,7 +220,7 @@ small{
 </head>
 <body>
 <div class="box">
-<h2 id="title">XREZZKY STORE</h2>
+<h2 id="title">XREZZKYSTORE</h2>
 <p style="text-align:center;font-size:12px">RNG GIVEAWAY SYSTEM</p>
 
 <input id="name" placeholder="Nama (1x saja)">
@@ -223,6 +231,9 @@ small{
 </div>
 
 <button id="spinBtn">🌀 SPIN RNG</button>
+
+<!-- NEW: Public event ON/OFF indicator (visible on public page too) -->
+<div id="eventIndicator" aria-live="polite">EVENT: LOADING...</div>
 
 <div id="eventScheduleInfo"></div>
 <div id="eventTimer"></div>
@@ -264,8 +275,8 @@ small{
 
  <div style="display:flex;gap:6px;">
    <button id="applySettingsBtn" class="small-btn">🔁 Terapkan Settings</button>
-   <button id="toggleEventBtn" class="small-btn">TURN ON_OFF</button>
-   <!-- NEW: Separate ON / OFF buttons as requested -->
+   <button id="toggleEventBtn" class="small-btn">TURN OFF</button>
+   <!-- Separate ON / OFF buttons as requested -->
    <button id="eventOnBtn" class="small-btn" style="background:#22c55e;color:#000">EVENT ON</button>
    <button id="eventOffBtn" class="small-btn" style="background:#ef4444;color:#fff">EVENT OFF</button>
  </div>
@@ -403,6 +414,20 @@ settingsRef.on("value", snap => {
   if(typeof s.eventOn !== "undefined") EVENT_ON = s.eventOn === true;
   document.getElementById("eventStatus").innerText = EVENT_ON ? "ON" : "OFF";
   document.getElementById("toggleEventBtn").innerText = EVENT_ON ? "TURN OFF" : "TURN ON";
+
+  // Update the public indicator immediately
+  const ind = document.getElementById("eventIndicator");
+  if(ind){
+    if(EVENT_ON){
+      ind.innerText = "EVENT: ON";
+      ind.style.background = "#16a34a";
+      ind.style.color = "#000";
+    } else {
+      ind.innerText = "EVENT: OFF";
+      ind.style.background = "#ef4444";
+      ind.style.color = "#fff";
+    }
+  }
 
   REQUIRE_PARAMS = !!s.requireParams;
   document.getElementById("modeRequired").checked = REQUIRE_PARAMS;
@@ -839,7 +864,6 @@ document.getElementById("eventOnBtn").addEventListener("click", ()=>{
    if(SCHEDULE_ENABLED && SCHEDULE_START && SCHEDULE_END){
      const now = Date.now();
      if(now < SCHEDULE_START || now > SCHEDULE_END){
-       // Not within scheduled window — but user requested explicit ON; allow explicit on if admin wants
        if(!confirm("Schedule aktif dan sekarang berada di luar jangka waktu yang ditentukan. Tetap nyalakan event secara manual?")) return;
      }
    }
@@ -1106,4 +1130,4 @@ db.ref("winners").on("value", snap => {
 updateInfo();
 </script>
 </body>
-</html>
+ </html>
