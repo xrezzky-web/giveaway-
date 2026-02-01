@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>XREZZKYSTORE RNG GIVEAWAY</title>
 <style>
 body{
@@ -189,6 +189,12 @@ small{
 }
 #exportButtons{ display:flex; gap:8px; margin-top:8px; }
 #exportButtons button{ flex:1; }
+
+/* admin small grid */
+.admin-row{ display:flex; gap:6px; }
+.admin-row > *{ flex:1; }
+.mode-flag{ display:flex; align-items:center; gap:6px; margin-top:6px; color:#00ffd5; font-weight:bold; }
+.mode-flag input{ width:auto; }
 </style>
 </head>
 <body>
@@ -221,50 +227,74 @@ small{
 
 <div id="adminPanel">
  <b>🔒 ADMIN PANEL</b>
+
+ <div style="margin-top:6px;"><small style="color:#aaa">Mode:</small></div>
+ <div class="mode-flag">
+   <label><input type="radio" name="mode" id="modeTesting" value="testing"> Testing</label>
+   <label><input type="radio" name="mode" id="modeRequired" value="required"> Wajib Isi</label>
+ </div>
+
  <textarea id="adminInfo" placeholder="Tulis info event disini..."></textarea>
  <button id="updateInfoBtn">💾 Update Info Event</button>
- <input id="newCode" placeholder="Kode Baru">
- <input id="newCodeSpin" placeholder="Spin tambahan">
- <button id="addCodeBtn">➕ Tambah Code</button>
- <input id="maxSpinDevice" placeholder="Max Spin Per Device">
- <input id="maxWinDevice" placeholder="Max Hadiah Per Device">
- <input id="maxWinnerGlobal" placeholder="Max Pemenang Global">
- <!-- NEW: free spin per new user setting -->
- <input id="freeSpinNewUser" placeholder="Free Spin untuk User Baru (angka)">
- <button id="resetSpinBtn">♻ Reset Spin Semua User</button>
- <button id="restartWinnersBtn">🔄 Reset Pemenang</button>
- <button id="exportBtn">📤 EXPORT PEMENANG</button>
- <div id="exportStatus"></div>
- <button id="resetBtn">❌ Hapus Semua (User & Pemenang)</button>
 
- <!-- NEW: Event Controls -->
- <div id="eventControls">
-   <div>Event: <span id="eventStatus">ON</span></div>
+ <div class="admin-row">
+   <input id="maxWinnerGlobal" placeholder="Max Pemenang Global">
+   <input id="maxWinDevice" placeholder="Max Hadiah Per Device">
+ </div>
+ <div class="admin-row">
+   <input id="maxSpinDevice" placeholder="Max Spin Per Device">
+   <input id="freeSpinNewUser" placeholder="Free Spin untuk User Baru (angka)">
+ </div>
+
+ <div style="display:flex;gap:6px;">
+   <button id="applySettingsBtn">🔁 Terapkan Settings</button>
    <button id="toggleEventBtn">TURN OFF</button>
-   <button id="resetEventBtn">RESET EVENT</button>
-   <button id="resetCodesBtn">RESET SEMUA CODE</button>
  </div>
 
- <!-- NEW: Public Link controls -->
+ <div style="margin-top:8px;">
+   <button id="resetAllDataBtn" style="background:#ff4444;color:#fff">⚠️ RESET SEMUA DATA</button>
+   <small style="color:#aaa">Hapus semua spin & pemenang (kode redeem tetap ada). Akan meminta konfirmasi.</small>
+ </div>
+
+ <div style="margin-top:10px;">
+   <button id="resetSpinBtn">♻ Reset Spin Semua User (local)</button>
+   <button id="restartWinnersBtn">🔄 Reset Pemenang (firebase)</button>
+ </div>
+
+ <div style="margin-top:10px;">
+   <input id="newCode" placeholder="Kode Baru">
+   <input id="newCodeSpin" placeholder="Spin tambahan">
+   <button id="addCodeBtn">➕ Tambah Code</button>
+   <button id="resetCodesBtn">🧹 Reset SEMUA CODE (firebase)</button>
+ </div>
+
  <div style="margin-top:10px;border-top:1px solid #00ffd5;padding-top:10px;">
-   <div style="font-weight:bold">🔗 Public Page</div>
-   <input id="publicUrl" placeholder="Public Page URL (kosong = default)">
-   <div style="display:flex;gap:6px;">
-     <button id="setPublicUrlBtn">💾 Set Public URL</button>
-     <button id="openPublicBtn">🌐 Buka Halaman Publik</button>
-     <button id="copyPublicBtn">📋 Salin Link</button>
-   </div>
-   <small style="color:#aaa">Bisa gunakan URL kustom atau biarkan kosong untuk menggunakan halaman ini (dengan ?public=1).</small>
- </div>
-
- <!-- NEW: Wheel Manager -->
- <div id="wheelManager">
    <b>🎡 Wheel Manager</b>
    <div id="wheelList">Loading...</div>
    <input id="newWheelLabel" placeholder="Nama hadiah baru">
    <select id="newWheelType"><option value="win">HADIAH</option><option value="lose">ZONK</option></select>
    <input id="newWheelWeight" placeholder="Weight" value="1">
    <button id="addWheelItemBtn">➕ Tambah Item Wheel</button>
+ </div>
+
+ <div style="margin-top:10px;border-top:1px solid #00ffd5;padding-top:10px;">
+   <b>🔗 Public Page</b>
+   <input id="publicUrl" placeholder="Public Page URL (kosong = default)">
+   <div style="display:flex;gap:6px;margin-top:6px;">
+     <button id="setPublicUrlBtn">💾 Set Public URL</button>
+     <button id="openPublicBtn">🌐 Buka Halaman Publik</button>
+     <button id="copyPublicBtn">📋 Salin Link</button>
+   </div>
+ </div>
+
+ <div style="margin-top:10px;border-top:1px solid #00ffd5;padding-top:10px;">
+   <b>📤 Export</b>
+   <button id="exportBtn">EXPORT PEMENANG</button>
+   <div id="exportStatus"></div>
+ </div>
+
+ <div style="margin-top:10px;">
+   <button id="resetBtn">❌ Hapus Semua (User & Pemenang)</button>
  </div>
 
 </div>
@@ -291,10 +321,12 @@ const ADMIN_WA="6288293064112";
 let MAX_SPIN_PER_USER = 0;
 let MAX_WIN_PER_DEVICE = 2;
 let MAX_WINNER_GLOBAL = 10;
-// Keep the original FREE_SPIN_NEW_USER constant for backward compatibility (default)
-const FREE_SPIN_NEW_USER = 5;
+const DEFAULT_FREE_SPIN_NEW_USER = 5;
+let REQUIRE_PARAMS = false; // mode: required/wajib or testing
+let EVENT_ON = false;
+
 // prizes array will be kept in sync with firebase wheelItems (each item: {label, win, weight})
-const prizes=[
+const prizes = [
  {label:"ZONK",win:false, weight:1},
  {label:"CLASS(1)",win:true, weight:1},
  {label:"ZONK",win:false, weight:1},
@@ -302,13 +334,9 @@ const prizes=[
  {label:"ZONK",win:false, weight:1},
  {label:"TRAIN(1)+CLASS(1)",win:true, weight:1}
 ];
-let CODES={};
-let WIN_CHANCE=0.1; // kept for compatibility but weighted selection will determine final pick
-let EVENT_ON = true; // synced with firebase
 
-// This variable will hold admin-configured free spins for new users if set in Firebase.
-// If null, the code will fall back to FREE_SPIN_NEW_USER constant.
-let ADMIN_FREE_SPIN_NEW_USER = null;
+let CODES = {};
+let WIN_CHANCE = 0.1; // compatibility, weighted selection used
 
 // ================= FIREBASE =================
 const firebaseConfig = {
@@ -322,433 +350,110 @@ const firebaseConfig = {
  measurementId: "G-MQ71QRYHV7"
 };
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+const db = firebase.database();
 
-// Immediately start listening for settings so we can apply free-spin setting before giving spins
+// ================= STORAGE & DEVICE =================
+const deviceId = localStorage.getItem("devId") || (()=>{ const id = "dev-"+Math.random().toString(36).slice(2); localStorage.setItem("devId", id); return id; })();
+let spinData = JSON.parse(localStorage.getItem("spinData")||"{}");
+let usedCodes = JSON.parse(localStorage.getItem("usedCodes")||"{}");
+let lockedName = localStorage.getItem("lockedName");
+let hasWon = localStorage.getItem("hasWon")==="true";
+let totalSpin = JSON.parse(localStorage.getItem("totalSpin")||"0");
+let lastPrize = null;
+let lastResetAllTs = Number(localStorage.getItem("lastResetAllTs") || 0);
+
+// ensure entry
+if(!spinData[deviceId]) spinData[deviceId] = 0;
+
+// ================= SETTINGS SYNC =================
 const settingsRef = db.ref("settings");
 settingsRef.on("value", snap => {
   const s = snap.val() || {};
-  if(typeof s.eventOn !== "undefined") {
-    EVENT_ON = s.eventOn === true;
-  } else {
-    // ensure key exists
-    db.ref("settings/eventOn").set(true);
-    EVENT_ON = true;
-  }
+
+  // Event ON/OFF
+  if(typeof s.eventOn !== "undefined") EVENT_ON = s.eventOn === true;
   document.getElementById("eventStatus").innerText = EVENT_ON ? "ON" : "OFF";
   document.getElementById("toggleEventBtn").innerText = EVENT_ON ? "TURN OFF" : "TURN ON";
 
-  if(typeof s.maxWinnerGlobal !== "undefined") {
-    MAX_WINNER_GLOBAL = parseInt(s.maxWinnerGlobal) || MAX_WINNER_GLOBAL;
+  // Mode required/testing
+  REQUIRE_PARAMS = !!s.requireParams;
+  if(REQUIRE_PARAMS){
+    document.getElementById("modeRequired").checked = true;
+    document.getElementById("modeTesting").checked = false;
+  } else {
+    document.getElementById("modeTesting").checked = true;
+    document.getElementById("modeRequired").checked = false;
+  }
+
+  // Max fields
+  if(typeof s.maxWinnerGlobal !== "undefined"){
+    MAX_WINNER_GLOBAL = parseInt(s.maxWinnerGlobal) || 0;
     document.getElementById("maxWinnerGlobal").value = MAX_WINNER_GLOBAL;
   }
-  if(typeof s.maxWinPerDevice !== "undefined") {
-    MAX_WIN_PER_DEVICE = parseInt(s.maxWinPerDevice) || MAX_WIN_PER_DEVICE;
+  if(typeof s.maxWinPerDevice !== "undefined"){
+    MAX_WIN_PER_DEVICE = parseInt(s.maxWinPerDevice) || 0;
     document.getElementById("maxWinDevice").value = MAX_WIN_PER_DEVICE;
   }
-  if(typeof s.maxSpinPerUser !== "undefined") {
-    MAX_SPIN_PER_USER = parseInt(s.maxSpinPerUser) || MAX_SPIN_PER_USER;
+  if(typeof s.maxSpinPerUser !== "undefined"){
+    MAX_SPIN_PER_USER = parseInt(s.maxSpinPerUser) || 0;
     document.getElementById("maxSpinDevice").value = MAX_SPIN_PER_USER;
   }
 
-  // NEW: free spin per new user from settings
+  // freeSpin setting
   if(typeof s.freeSpinNewUser !== "undefined"){
-    const v = parseInt(s.freeSpinNewUser);
-    ADMIN_FREE_SPIN_NEW_USER = (isNaN(v) ? null : v);
-    const el = document.getElementById("freeSpinNewUser");
-    if(el) el.value = ADMIN_FREE_SPIN_NEW_USER !== null ? String(ADMIN_FREE_SPIN_NEW_USER) : "";
+    document.getElementById("freeSpinNewUser").value = String(s.freeSpinNewUser);
   } else {
-    ADMIN_FREE_SPIN_NEW_USER = null;
-    const el = document.getElementById("freeSpinNewUser");
-    if(el) el.value = "";
+    document.getElementById("freeSpinNewUser").value = "";
   }
 
-  // NEW: publicUrl sync
+  // public URL
   if(typeof s.publicUrl !== "undefined"){
-    const u = s.publicUrl || "";
-    const el = document.getElementById("publicUrl");
-    if(el) el.value = u;
+    document.getElementById("publicUrl").value = s.publicUrl || "";
   } else {
-    const el = document.getElementById("publicUrl");
-    if(el) el.value = "";
+    document.getElementById("publicUrl").value = "";
   }
-});
 
-// ================= STORAGE =================
-const deviceId=localStorage.getItem("devId") || (()=>{ 
- const id="dev-"+Math.random().toString(36).slice(2);
- localStorage.setItem("devId",id);
- return id;
-})();
-let spinData=JSON.parse(localStorage.getItem("spinData")||"{}");
-let usedCodes=JSON.parse(localStorage.getItem("usedCodes")||"{}");
-let lockedName=localStorage.getItem("lockedName");
-let hasWon=localStorage.getItem("hasWon")==="true";
-let totalSpin=JSON.parse(localStorage.getItem("totalSpin")||"0");
-let lastPrize=null;
-
-// FREE SPIN USER BARU
-// Use admin-configured value if available, otherwise fallback to original constant.
-if(!spinData[deviceId]) spinData[deviceId]=0;
-if(!localStorage.getItem("claimedFree")){
- // When the settingsRef event hasn't fired yet, ADMIN_FREE_SPIN_NEW_USER may be null.
- // To make sure admin setting is applied for future page loads, we check settings once as well.
- settingsRef.once("value").then(snap=>{
-   const s = snap.val() || {};
-   const adminVal = (typeof s.freeSpinNewUser !== "undefined") ? parseInt(s.freeSpinNewUser) : null;
-   const give = (adminVal !== null && !isNaN(adminVal)) ? adminVal : FREE_SPIN_NEW_USER;
-   spinData[deviceId]+=give;
-   localStorage.setItem("claimedFree","yes");
-   saveData();
-   updateInfo();
- });
-}
-if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
-
-// LOAD CODES DARI FIREBASE
-db.ref("codes").on("value", snapshot=>{
- CODES = snapshot.val() || {};
-});
-
-// ================= DRAW WHEEL =================
-const canvas=document.getElementById("wheel");
-const ctx=canvas.getContext("2d");
-const c=140;
-function drawWheel(){
- const slice=2*Math.PI/prizes.length;
- ctx.clearRect(0,0,canvas.width,canvas.height);
- for(let i=0;i<prizes.length;i++){
-   ctx.beginPath();
-   ctx.moveTo(c,c);
-   ctx.fillStyle=`hsl(${Math.random()*360},80%,55%)`;
-   ctx.arc(c,c,140,i*slice,(i+1)*slice);
-   ctx.fill();
-   ctx.save();
-   ctx.translate(c,c);
-   ctx.rotate(i*slice+slice/2);
-   ctx.fillStyle="#000";
-
-   // DYNAMIC FONT SIZE: otomatis mengecil jika teks terlalu panjang untuk slice
-   const text = prizes[i].label || "";
-   const baseFontSize = 12;
-   const minFontSize = 8;
-   const textRadius = 50; // jarak dari pusat tempat teks digambar
-   const availableArcLen = slice * textRadius;
-   const maxTextWidth = Math.max(40, Math.min(120, availableArcLen * 0.9));
-
-   let fontSize = baseFontSize;
-   ctx.font = `bold ${fontSize}px Arial`;
-   while(ctx.measureText(text).width > maxTextWidth && fontSize > minFontSize){
-     fontSize--;
-     ctx.font = `bold ${fontSize}px Arial`;
-   }
-
-   ctx.fillText(text,50,5);
-   ctx.restore();
- }
-}
-drawWheel();
-
-// ================= UTIL =================
-function updateInfo(){
- document.getElementById("spinInfo").innerText =
-  spinData[deviceId]>0 ?
-  `🎟 Spin tersisa: ${spinData[deviceId]}` :
-  `⚠️ Spin habis!`;
-}
-function saveData(){
- localStorage.setItem("spinData",JSON.stringify(spinData));
- localStorage.setItem("usedCodes",JSON.stringify(usedCodes));
- localStorage.setItem("hasWon",hasWon?"true":"false");
- localStorage.setItem("lockedName",lockedName||"");
- localStorage.setItem("totalSpin",totalSpin);
-}
-
-// Weighted random helper: picks an index from given indices array (indices are indexes into prizes[])
-function weightedPickIndex(indices){
-  if(!Array.isArray(indices) || indices.length===0) return null;
-  // compute total weight (ensure non-negative)
-  let total = 0;
-  const weights = indices.map(i => {
-    const w = Number(prizes[i].weight) || 0;
-    const ww = w < 0 ? 0 : w;
-    total += ww;
-    return ww;
-  });
-  if(total <= 0){
-    // fallback to uniform random if all weights zero
-    return indices[Math.floor(Math.random()*indices.length)];
-  }
-  let r = Math.random() * total;
-  for(let k=0;k<indices.length;k++){
-    r -= weights[k];
-    if(r <= 0) return indices[k];
-  }
-  // fallback
-  return indices[indices.length-1];
-}
-
-// ================= SPIN =================
-let rot=0,lock=false;
-document.getElementById("spinBtn").addEventListener("click",()=>{
- if(lock) return;
- if(spinData[deviceId]<=0) return alert("Spin kamu habis!");
- const name=document.getElementById("name").value.trim();
- if(!name) return alert("Isi nama!");
- if(!lockedName){ lockedName=name; document.getElementById("name").disabled=true; lockedName=name; }
- totalSpin++;
-
- spinData[deviceId]--;
- saveData();
- updateInfo();
-
- db.ref("winners").once("value").then(snapshot=>{
-  const winnersData=snapshot.val()||[];
-  db.ref("deviceWins/"+deviceId).once("value").then(dwSnap=>{
-    const deviceWinsCount = dwSnap.val() || 0;
-
-    // Build index lists
-    const winPrizes = prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
-    const losePrizes = prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
-
-    // Conditions that force ZONK:
-    let forceZonk = false;
-    if(!EVENT_ON) forceZonk = true;
-    if(winnersData.length >= MAX_WINNER_GLOBAL) forceZonk = true;
-    if(deviceWinsCount >= MAX_WIN_PER_DEVICE) forceZonk = true;
-
-    let idx;
-    if(forceZonk || hasWon){
-      // Weighted pick among losePrizes
-      idx = weightedPickIndex(losePrizes);
-      if(idx === null) idx = 0;
-    } else {
-      // EVENT ON and within limits -> pick weighted among ALL prizes
-      const allIndices = prizes.map((_,i)=>i);
-      idx = weightedPickIndex(allIndices);
-      if(idx === null){
-        idx = Math.floor(Math.random()*prizes.length);
-      }
-      // Double-check: if idx is winning but limits reached, fallback to lose pick
-      if(prizes[idx].win && (winnersData.length >= MAX_WINNER_GLOBAL || deviceWinsCount >= MAX_WIN_PER_DEVICE || !EVENT_ON)){
-        idx = weightedPickIndex(losePrizes) || idx;
-      }
-    }
-
-    const anglePer=360/prizes.length;
-    const target=90-(idx*anglePer)-anglePer/2;
-    rot+=360*6+(target-(rot%360));
-    lock=true;
-    canvas.style.transform=`rotate(${rot}deg)`;
-
-    setTimeout(()=>{
-      lock=false;
-      lastPrize=prizes[idx];
-      document.getElementById("result").innerText=`🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
-      document.getElementById("log").innerHTML+=`<div>${lockedName} → ${lastPrize.label}</div>`;
-
-      // If winner and allowed, record (same checks as before)
-      if(lastPrize.win && !hasWon && EVENT_ON){
-        db.ref("winners").once("value").then(snap2=>{
-          const current=snap2.val()||[];
-          if(current.length < MAX_WINNER_GLOBAL){
-            db.ref("deviceWins/"+deviceId).once("value").then(dwSnap2=>{
-              const currentDeviceWins = dwSnap2.val() || 0;
-              if(currentDeviceWins < MAX_WIN_PER_DEVICE){
-                hasWon=true;
-                const timeStamp=new Date().toLocaleString();
-                current.push({name:lockedName, prize:lastPrize.label, time:timeStamp});
-                db.ref("winners").set(current);
-                db.ref("deviceWins/"+deviceId).set(currentDeviceWins+1);
-                document.getElementById("claimBtn").style.display="block";
-                const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}\n🕒 ${timeStamp}`);
-                window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
-              } else {
-                // device limit reached -> do nothing (treated as zonk)
-              }
-            });
-          } else {
-            // global limit reached -> do nothing
-          }
-        });
-      }
-
-      if(!lastPrize.win || !hasWon) document.getElementById("claimBtn").style.display="none";
-
-      saveData();
+  // resetAllTimestamp handling - when admin triggered reset all data, clients should zero local spin and hasWon
+  if(typeof s.resetAllTimestamp !== "undefined"){
+    const t = Number(s.resetAllTimestamp) || 0;
+    if(t > lastResetAllTs){
+      spinData[deviceId] = 0;
+      hasWon = false;
+      localStorage.setItem("hasWon","false");
+      localStorage.setItem("spinData",JSON.stringify(spinData));
+      localStorage.setItem("lastResetAllTs",String(t));
+      lastResetAllTs = t;
       updateInfo();
-    },4200);
-  });
- });
-});
-
-// ================= REDEEM CODE =================
-document.getElementById("redeemBtn").addEventListener("click",()=>{
- const codeInput=document.getElementById("code");
- const code=codeInput.value.trim().toUpperCase();
- if(!code) return alert("Masukkan kode!");
- if(CODES[code]){
-   const key=deviceId+"_"+code;
-   if(!usedCodes[key]){
-     spinData[deviceId]+=CODES[code];
-     usedCodes[key]=true;
-     saveData();
-     updateInfo();
-     codeInput.value="";
-     alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
-   }else alert("⚠️ Kode sudah digunakan!");
- }else alert("⚠️ Kode tidak valid!");
-});
-
-// ================= CLAIM =================
-document.getElementById("claimBtn").addEventListener("click",()=>{
- if(!lastPrize||!lastPrize.win) return;
- const t=encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`);
- window.open(`https://wa.me/${ADMIN_WA}?text=${t}`,"_blank");
-});
-
-// ================= ADMIN =================
-let tap=0;
-document.getElementById("title").addEventListener("click",()=>{
- tap++;
- if(tap>=5){
-  const pin=prompt("PIN ADMIN:");
-  if(pin===ADMIN_PIN) document.getElementById("adminPanel").style.display="block";
-  tap=0;
- }
-});
-
-// UPDATE INFO EVENT
-document.getElementById("updateInfoBtn").addEventListener("click",()=>{
- const info=document.getElementById("adminInfo").value.trim();
- db.ref("infoBoard").set(info);
- alert("Info event diperbarui!");
-});
-
-// ADD CODE PUBLIK
-document.getElementById("addCodeBtn").addEventListener("click",()=>{
- const newCode=document.getElementById("newCode").value.trim().toUpperCase();
- const spin=parseInt(document.getElementById("newCodeSpin") ? document.getElementById("newCodeSpin").value : 0) || 0;
- if(newCode && spin>0){
-   db.ref("codes/"+newCode).set(spin);
-   alert(`Code ${newCode} ditambahkan ke publik! Spin +${spin}`);
- }else alert("Masukkan kode dan spin dengan benar.");
-});
-
-// UPDATE MAX / RESET / EXPORT
-document.getElementById("maxSpinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxSpinDevice").value)||0; MAX_SPIN_PER_USER=v; db.ref("settings/maxSpinPerUser").set(v); alert(`Max spin per device diubah menjadi ${v}`);});
-document.getElementById("maxWinDevice").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinDevice").value)||0; MAX_WIN_PER_DEVICE=v; db.ref("settings/maxWinPerDevice").set(v); alert(`Max hadiah per device diubah menjadi ${v}`);});
-document.getElementById("maxWinnerGlobal").addEventListener("change",()=>{const v=parseInt(document.getElementById("maxWinnerGlobal").value)||0; MAX_WINNER_GLOBAL=v; db.ref("settings/maxWinnerGlobal").set(v); alert(`Max pemenang global diubah menjadi ${v}`);});
-
-// NEW: update free spin setting in firebase when admin changes input
-document.getElementById("freeSpinNewUser").addEventListener("change", ()=>{
-  const v = parseInt(document.getElementById("freeSpinNewUser").value);
-  if(isNaN(v) || v < 0){
-    alert("Masukkan angka valid untuk free spin.");
-    return;
-  }
-  db.ref("settings/freeSpinNewUser").set(v);
-  ADMIN_FREE_SPIN_NEW_USER = v;
-  alert(`Free spin untuk user baru diubah menjadi ${v}`);
-});
-
-document.getElementById("resetSpinBtn").addEventListener("click",()=>{if(confirm("Reset spin semua user?")){localStorage.clear();location.reload();}});
-document.getElementById("restartWinnersBtn").addEventListener("click",()=>{if(confirm("Reset data pemenang?")){db.ref("winners").set([]); db.ref("deviceWins").set({});}});
-document.getElementById("exportBtn").addEventListener("click",()=>{
- db.ref("winners").once("value").then(snapshot=>{
-  const data = snapshot.val() || [];
-  if(data.length===0){
-    document.getElementById("exportArea").value = "Belum ada pemenang.";
-  } else {
-    let t = "DAFTAR PEMENANG:\n\n";
-    data.forEach((w,i)=>{
-      t += `${i+1}. ${w.name} - ${w.prize} - ${w.time}\n`;
-    });
-    document.getElementById("exportArea").value = t;
-  }
-  document.getElementById("exportModal").style.display = "flex";
-  document.getElementById("exportStatus").innerText = `Jumlah pemenang: ${data.length}`;
- });
-});
-document.getElementById("resetBtn").addEventListener("click",()=>{if(confirm("Hapus semua user dan pemenang?")){db.ref("winners").set([]); db.ref("deviceWins").set({}); localStorage.clear();location.reload();}});
-
-// Export modal buttons
-document.getElementById("copyExportBtn").addEventListener("click", ()=>{
-  const text = document.getElementById("exportArea").value || "";
-  if(!text) return alert("Tidak ada yang disalin.");
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(()=> {
-      alert("Teks pemenang berhasil disalin ke clipboard.");
-    }).catch(()=> {
-      const ta = document.getElementById("exportArea");
-      ta.select();
-      try { document.execCommand('copy'); alert("Teks pemenang berhasil disalin ke clipboard."); }
-      catch(e){ alert("Gagal menyalin secara otomatis. Silakan salin manual."); }
-    });
-  } else {
-    const ta = document.getElementById("exportArea");
-    ta.select();
-    try { document.execCommand('copy'); alert("Teks pemenang berhasil disalin ke clipboard."); }
-    catch(e){ alert("Gagal menyalin secara otomatis. Silakan salin manual."); }
+    }
   }
 });
-document.getElementById("closeExportBtn").addEventListener("click", ()=>{
-  document.getElementById("exportModal").style.display = "none";
+
+// ================= CODES SYNC =================
+db.ref("codes").on("value", snapshot=>{
+  CODES = snapshot.val() || {};
 });
 
-// ================= NEW ADMIN FEATURES IMPLEMENTATION =================
-
-// Toggle event on/off
-document.getElementById("toggleEventBtn").addEventListener("click", ()=>{
-  const newState = !EVENT_ON;
-  db.ref("settings/eventOn").set(newState);
-  alert(`Event telah di${newState ? "ON" : "OFF"}`);
-});
-
-// RESET EVENT button
-document.getElementById("resetEventBtn").addEventListener("click", ()=>{
-  if(!confirm("Reset event?\nIni akan mematikan event, menghapus pemenang dan mereset hitungan hadiah per device.")) return;
-  db.ref("settings/eventOn").set(false);
-  db.ref("winners").set([]);
-  db.ref("deviceWins").set({});
-  hasWon = false;
-  lastPrize = null;
-  localStorage.removeItem("hasWon");
-  alert("Event di-reset dan dimatikan. Data pemenang dan hitungan device telah dihapus.");
-});
-
-// RESET SEMUA CODE button
-document.getElementById("resetCodesBtn").addEventListener("click", ()=>{
-  if(!confirm("Hapus semua kode redeem di Firebase?")) return;
-  db.ref("codes").set({});
-  alert("Semua kode telah dihapus dari Firebase.");
-});
-
-// ================= WHEEL MANAGEMENT (realtime) =================
+// ================= WHEEL ITEMS SYNC =================
 const wheelItemsRef = db.ref("wheelItems");
 wheelItemsRef.once("value").then(snap=>{
   if(!snap.exists()){
-    const initial = prizes.map(p=>({label: p.label, win: !!p.win, weight: Number(p.weight) || 1}));
+    const initial = prizes.map(p => ({ label: p.label, win: !!p.win, weight: Number(p.weight) || 1 }));
     db.ref("wheelItems").set(initial);
   }
 });
-
 wheelItemsRef.on("value", snap=>{
   const items = snap.val();
-  if(!items || !Array.isArray(items) || items.length === 0){
-    const initial = prizes.map(p=>({label: p.label, win: !!p.win, weight: Number(p.weight) || 1}));
+  if(!items || !Array.isArray(items) || items.length===0){
+    const initial = prizes.map(p => ({ label: p.label, win: !!p.win, weight: Number(p.weight) || 1 }));
     db.ref("wheelItems").set(initial);
     return;
   }
-
-  // Update local prizes array with label, win, weight
   prizes.length = 0;
   for(let i=0;i<items.length;i++){
     const it = items[i] || {};
     prizes.push({ label: it.label || "ZONK", win: !!it.win, weight: (typeof it.weight !== "undefined") ? Number(it.weight) : 1 });
   }
-
-  // Safety: ensure at least one win and one lose
+  // enforce at least 1 win and 1 lose
   const hasWin = prizes.some(p=>p.win);
   const hasLose = prizes.some(p=>!p.win);
   if(!hasWin || !hasLose){
@@ -757,16 +462,363 @@ wheelItemsRef.on("value", snap=>{
       if(prizes.length < 2) prizes.push({label:"CLASS(1)", win:true, weight:1});
       else prizes[1].win = true;
     }
-    const corrected = prizes.map(p=>({label:p.label, win:p.win, weight: Number(p.weight) || 1}));
+    const corrected = prizes.map(p => ({ label: p.label, win: p.win, weight: Number(p.weight)||1 }));
     db.ref("wheelItems").set(corrected);
     return;
   }
-
   drawWheel();
   renderWheelListUI(items);
 });
 
-// Render wheel list UI inside admin area (editable label, status, weight, delete)
+// ================= DRAW WHEEL (with dynamic text sizing) =================
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const c = 140;
+function drawWheel(){
+  const slice = 2*Math.PI / prizes.length;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let i=0;i<prizes.length;i++){
+    ctx.beginPath();
+    ctx.moveTo(c,c);
+    ctx.fillStyle = `hsl(${Math.random()*360},80%,55%)`;
+    ctx.arc(c,c,140,i*slice,(i+1)*slice);
+    ctx.fill();
+    ctx.save();
+    ctx.translate(c,c);
+    ctx.rotate(i*slice + slice/2);
+    ctx.fillStyle="#000";
+
+    const text = prizes[i].label || "";
+    const baseFontSize = 12;
+    const minFontSize = 8;
+    const textRadius = 50;
+    const availableArcLen = slice * textRadius;
+    const maxTextWidth = Math.max(40, Math.min(120, availableArcLen * 0.9));
+
+    let fontSize = baseFontSize;
+    ctx.font = `bold ${fontSize}px Arial`;
+    while(ctx.measureText(text).width > maxTextWidth && fontSize > minFontSize){
+      fontSize--;
+      ctx.font = `bold ${fontSize}px Arial`;
+    }
+
+    ctx.fillText(text,50,5);
+    ctx.restore();
+  }
+}
+drawWheel();
+
+// ================= UTIL =================
+function updateInfo(){
+  document.getElementById("spinInfo").innerText =
+    (spinData[deviceId]||0) > 0 ? `🎟 Spin tersisa: ${spinData[deviceId]}` : `⚠️ Spin habis!`;
+}
+function saveData(){
+  localStorage.setItem("spinData", JSON.stringify(spinData));
+  localStorage.setItem("usedCodes", JSON.stringify(usedCodes));
+  localStorage.setItem("hasWon", hasWon ? "true" : "false");
+  localStorage.setItem("lockedName", lockedName || "");
+  localStorage.setItem("totalSpin", totalSpin);
+}
+
+// Weighted random helper
+function weightedPickIndex(indices){
+  if(!Array.isArray(indices) || indices.length===0) return null;
+  let total=0;
+  const weights = indices.map(i=>{
+    const w = Number(prizes[i].weight) || 0;
+    const ww = (w<0) ? 0 : w;
+    total += ww;
+    return ww;
+  });
+  if(total <= 0) return indices[Math.floor(Math.random()*indices.length)];
+  let r = Math.random()*total;
+  for(let k=0;k<indices.length;k++){
+    r -= weights[k];
+    if(r <= 0) return indices[k];
+  }
+  return indices[indices.length-1];
+}
+
+// ================= SPIN (core) =================
+let rot = 0, lock = false;
+document.getElementById("spinBtn").addEventListener("click", ()=>{
+  if(lock) return;
+  if((spinData[deviceId]||0) <= 0) return alert("Spin kamu habis!");
+  const name = document.getElementById("name").value.trim();
+  if(!name) return alert("Isi nama!");
+  if(!lockedName){ lockedName = name; document.getElementById("name").disabled = true; }
+  totalSpin++;
+
+  spinData[deviceId] = (spinData[deviceId]||0) - 1;
+  saveData();
+  updateInfo();
+
+  db.ref("winners").once("value").then(snapshot=>{
+    const winnersData = snapshot.val() || [];
+    db.ref("deviceWins/"+deviceId).once("value").then(dwSnap=>{
+      const deviceWinsCount = dwSnap.val() || 0;
+
+      const winPrizes = prizes.map((p,i)=>p.win?i:null).filter(i=>i!==null);
+      const losePrizes = prizes.map((p,i)=>!p.win?i:null).filter(i=>i!==null);
+
+      let forceZonk = false;
+      if(!EVENT_ON) forceZonk = true;
+      if(MAX_WINNER_GLOBAL>0 && winnersData.length >= MAX_WINNER_GLOBAL) forceZonk = true;
+      if(MAX_WIN_PER_DEVICE>0 && deviceWinsCount >= MAX_WIN_PER_DEVICE) forceZonk = true;
+
+      let idx;
+      if(forceZonk || hasWon){
+        idx = weightedPickIndex(losePrizes) || 0;
+      } else {
+        const allIndices = prizes.map((_,i)=>i);
+        idx = weightedPickIndex(allIndices);
+        if(idx === null) idx = Math.floor(Math.random()*prizes.length);
+        if(prizes[idx].win && ((MAX_WINNER_GLOBAL>0 && winnersData.length >= MAX_WINNER_GLOBAL) || (MAX_WIN_PER_DEVICE>0 && deviceWinsCount >= MAX_WIN_PER_DEVICE) || !EVENT_ON)){
+          idx = weightedPickIndex(losePrizes) || idx;
+        }
+      }
+
+      const anglePer = 360 / prizes.length;
+      const target = 90 - (idx * anglePer) - anglePer/2;
+      rot += 360*6 + (target - (rot%360));
+      lock = true;
+      canvas.style.transform = `rotate(${rot}deg)`;
+
+      setTimeout(()=>{
+        lock = false;
+        lastPrize = prizes[idx];
+        document.getElementById("result").innerText = `🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
+        document.getElementById("log").innerHTML += `<div>${lockedName} → ${lastPrize.label}</div>`;
+
+        // record winner if allowed and real win
+        if(lastPrize.win && !hasWon && EVENT_ON){
+          db.ref("winners").once("value").then(snap2=>{
+            const current = snap2.val()||[];
+            const globalOk = (MAX_WINNER_GLOBAL===0) || (current.length < MAX_WINNER_GLOBAL);
+            if(globalOk){
+              db.ref("deviceWins/"+deviceId).once("value").then(dwSnap2=>{
+                const currentDeviceWins = dwSnap2.val() || 0;
+                const deviceOk = (MAX_WIN_PER_DEVICE===0) || (currentDeviceWins < MAX_WIN_PER_DEVICE);
+                if(deviceOk){
+                  hasWon = true;
+                  const timeStamp = new Date().toLocaleString();
+                  current.push({ name: lockedName, prize: lastPrize.label, time: timeStamp });
+                  db.ref("winners").set(current);
+                  db.ref("deviceWins/"+deviceId).set(currentDeviceWins+1);
+                  document.getElementById("claimBtn").style.display = "block";
+                  const t = encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}\n🕒 ${timeStamp}`);
+                  window.open(`https://wa.me/${ADMIN_WA}?text=${t}`, "_blank");
+                }
+              });
+            }
+          });
+        }
+
+        if(!lastPrize.win || !hasWon) document.getElementById("claimBtn").style.display = "none";
+
+        saveData();
+        updateInfo();
+      }, 4200);
+    });
+  });
+});
+
+// ================= REDEEM CODE =================
+document.getElementById("redeemBtn").addEventListener("click", ()=>{
+  const codeInput = document.getElementById("code");
+  const code = codeInput.value.trim().toUpperCase();
+  if(!code) return alert("Masukkan kode!");
+  if(CODES[code]){
+    const key = deviceId + "_" + code;
+    if(!usedCodes[key]){
+      spinData[deviceId] = (spinData[deviceId]||0) + CODES[code];
+      usedCodes[key] = true;
+      saveData();
+      updateInfo();
+      codeInput.value = "";
+      alert(`✅ Code ${code} berhasil! Spin +${CODES[code]}`);
+    } else alert("⚠️ Kode sudah digunakan!");
+  } else alert("⚠️ Kode tidak valid!");
+});
+
+// ================= CLAIM =================
+document.getElementById("claimBtn").addEventListener("click", ()=>{
+  if(!lastPrize || !lastPrize.win) return;
+  const t = encodeURIComponent(`Halo admin XREZZKYSTORE 👋\n\nSaya ${lockedName} menang:\n🎁 ${lastPrize.label}`);
+  window.open(`https://wa.me/${ADMIN_WA}?text=${t}`, "_blank");
+});
+
+// ================= ADMIN OPEN =================
+let tap = 0;
+(function setupAdminAccess(){
+  // if page loaded with public=1, disable admin open
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('public') === '1' || params.get('public') === 'true'){
+      // hide admin unlocking (do nothing on title clicks)
+      document.getElementById('title').addEventListener('click', ()=>{});
+      return;
+    }
+  } catch(e){}
+  // normal admin unlock by 5 taps
+  document.getElementById("title").addEventListener("click", ()=>{
+    tap++;
+    if(tap >= 5){
+      const pin = prompt("PIN ADMIN:");
+      if(pin === ADMIN_PIN) document.getElementById("adminPanel").style.display = "block";
+      tap = 0;
+    }
+  });
+})();
+
+// ================= ADMIN ACTIONS =================
+
+// Apply settings (writes to Firebase)
+document.getElementById("applySettingsBtn").addEventListener("click", ()=>{
+  const mwg = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
+  const mwd = parseInt(document.getElementById("maxWinDevice").value) || 0;
+  const msp = parseInt(document.getElementById("maxSpinDevice").value) || 0;
+  const freeNewRaw = document.getElementById("freeSpinNewUser").value.trim();
+  const freeNew = freeNewRaw === "" ? null : (parseInt(freeNewRaw) || 0);
+
+  db.ref("settings/maxWinnerGlobal").set(mwg);
+  db.ref("settings/maxWinPerDevice").set(mwd);
+  db.ref("settings/maxSpinPerUser").set(msp);
+  if(freeNew !== null) db.ref("settings/freeSpinNewUser").set(freeNew);
+  alert("Settings disimpan ke Firebase.");
+});
+
+// Mode radio buttons
+document.getElementById("modeRequired").addEventListener("change", ()=>{
+  if(document.getElementById("modeRequired").checked) db.ref("settings/requireParams").set(true);
+});
+document.getElementById("modeTesting").addEventListener("change", ()=>{
+  if(document.getElementById("modeTesting").checked) db.ref("settings/requireParams").set(false);
+});
+
+// toggle event ON/OFF with validation and start-from-zero prompt
+document.getElementById("toggleEventBtn").addEventListener("click", async ()=>{
+  const newState = !EVENT_ON;
+  if(newState){ // enabling event
+    // check if REQUIRE_PARAMS and required fields set
+    const sSnap = await settingsRef.once("value");
+    const s = sSnap.val() || {};
+    const require = !!s.requireParams;
+    if(require){
+      const info = (document.getElementById("adminInfo").value || "").trim() || s.infoBoard;
+      const mwg = parseInt(document.getElementById("maxWinnerGlobal").value) || s.maxWinnerGlobal;
+      const mwd = parseInt(document.getElementById("maxWinDevice").value) || s.maxWinPerDevice;
+      const msp = parseInt(document.getElementById("maxSpinDevice").value) || s.maxSpinPerUser;
+      if(!info || !mwg || !mwd || !msp){
+        return alert("Mode Wajib: lengkapi semua parameter (Info Event, Max Pemenang Global, Max Hadiah Per Device, Max Spin Per Device) sebelum mengaktifkan event.");
+      }
+    }
+    // Ask whether start fresh or continue
+    const startFresh = confirm("Aktifkan event: Mulai dari nol? (OK = Mulai dari nol — akan mereset pemenang & hitungan hadiah per device) \nBatal = Lanjutkan event lama");
+    if(startFresh){
+      await performResetAllData(false); // reset timestamp, winners, deviceWins; keep codes
+    }
+    db.ref("settings/eventOn").set(true);
+    alert("Event diaktifkan.");
+  } else {
+    db.ref("settings/eventOn").set(false);
+    alert("Event dimatikan. Pengguna masih dapat spin tapi hasil akan ZONK.");
+  }
+});
+
+// RESET SEMUA DATA (admin) - keeps codes, clears winners and device wins and signals clients to clear local spins
+document.getElementById("resetAllDataBtn").addEventListener("click", ()=>{
+  if(!confirm("⚠️ Data user, spin, dan pemenang akan terhapus semua. Lanjutkan?")) return;
+  performResetAllData(true).then(()=> alert("Reset semua data selesai."));
+});
+
+// Implementation of reset all data (sets winners=[], deviceWins={}, and settings.resetAllTimestamp)
+async function performResetAllData(setTimestamp){
+  // reset winners and deviceWins in Firebase
+  await db.ref("winners").set([]);
+  await db.ref("deviceWins").set({});
+  // optionally update resetAllTimestamp to notify clients to clear their local spin counts
+  const ts = Date.now();
+  if(setTimestamp) await db.ref("settings/resetAllTimestamp").set(ts);
+  // update local client as well
+  spinData = spinData || {};
+  spinData[deviceId] = 0;
+  hasWon = false;
+  localStorage.setItem("spinData", JSON.stringify(spinData));
+  localStorage.setItem("hasWon","false");
+  localStorage.setItem("lastResetAllTs", String(ts));
+}
+
+// Reset spin all user (local clear)
+document.getElementById("resetSpinBtn").addEventListener("click", ()=>{
+  if(!confirm("Reset spin semua user (localStorage akan dibersihkan di browser ini). Lanjutkan?")) return;
+  localStorage.clear();
+  location.reload();
+});
+
+// reset winners in firebase
+document.getElementById("restartWinnersBtn").addEventListener("click", ()=>{
+  if(!confirm("Reset data pemenang di Firebase?")) return;
+  db.ref("winners").set([]);
+  db.ref("deviceWins").set({});
+  alert("Data pemenang di-reset.");
+});
+
+// Codes management
+document.getElementById("addCodeBtn").addEventListener("click", ()=>{
+  const newCode = (document.getElementById("newCode").value || "").trim().toUpperCase();
+  const spin = parseInt(document.getElementById("newCodeSpin").value) || 0;
+  if(!newCode || spin <= 0) return alert("Masukkan kode dan spin dengan benar.");
+  db.ref("codes/"+newCode).set(spin);
+  alert(`Code ${newCode} ditambahkan. Spin +${spin}`);
+});
+document.getElementById("resetCodesBtn").addEventListener("click", ()=>{
+  if(!confirm("Hapus semua kode redeem di Firebase?")) return;
+  db.ref("codes").set({});
+  alert("Semua kode dihapus dari Firebase.");
+});
+
+// Export winners
+document.getElementById("exportBtn").addEventListener("click", ()=>{
+  db.ref("winners").once("value").then(snapshot=>{
+    const data = snapshot.val() || [];
+    let txt = "";
+    if(data.length === 0) txt = "Belum ada pemenang.";
+    else {
+      txt = "DAFTAR PEMENANG:\n\n";
+      data.forEach((w,i)=>{
+        txt += `${i+1}. ${w.name} - ${w.prize} - ${w.time}\n`;
+      });
+    }
+    document.getElementById("exportArea").value = txt;
+    document.getElementById("exportModal").style.display = "flex";
+    document.getElementById("exportStatus").innerText = `Jumlah pemenang: ${data.length}`;
+  });
+});
+document.getElementById("copyExportBtn").addEventListener("click", ()=>{
+  const text = document.getElementById("exportArea").value || "";
+  if(!text) return alert("Tidak ada yang disalin.");
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=> alert("Teks pemenang berhasil disalin ke clipboard."), ()=> alert("Gagal menyalin otomatis."));
+  } else {
+    const ta = document.getElementById("exportArea");
+    ta.select();
+    try { document.execCommand('copy'); alert("Teks pemenang disalin (fallback)."); } catch(e){ alert("Gagal menyalin."); }
+  }
+});
+document.getElementById("closeExportBtn").addEventListener("click", ()=> document.getElementById("exportModal").style.display = "none");
+
+// Reset all (user & pemenang) - destructive
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  if(!confirm("Hapus semua user dan pemenang? (termasuk reset deviceWins)")) return;
+  db.ref("winners").set([]);
+  db.ref("deviceWins").set({});
+  localStorage.clear();
+  location.reload();
+});
+
+// ================= WHEEL MANAGER UI =================
 function renderWheelListUI(items){
   const container = document.getElementById("wheelList");
   container.innerHTML = "";
@@ -799,7 +851,7 @@ function renderWheelListUI(items){
         if(!Array.isArray(arr)) arr = [];
         arr[idx] = arr[idx] || {};
         arr[idx].win = (sel.value === "win");
-        const newArr = arr.map(a=>({label: a.label||"ZONK", win: !!a.win, weight: Number(a.weight) || 1}));
+        const newArr = arr.map(a => ({ label: a.label||"ZONK", win: !!a.win, weight: Number(a.weight)||1 }));
         const hasWin2 = newArr.some(a=>a.win);
         const hasLose2 = newArr.some(a=>!a.win);
         if(!hasWin2 || !hasLose2){
@@ -825,7 +877,6 @@ function renderWheelListUI(items){
         if(!Array.isArray(arr)) arr = [];
         arr[idx] = arr[idx] || {};
         arr[idx].weight = w;
-        // persist
         db.ref("wheelItems").set(arr);
       });
     });
@@ -858,13 +909,8 @@ function renderWheelListUI(items){
     div.appendChild(delBtn);
     container.appendChild(div);
   });
-
-  if(items.length === 0){
-    container.innerHTML = "<i>Tidak ada item wheel</i>";
-  }
+  if(items.length === 0) container.innerHTML = "<i>Tidak ada item wheel</i>";
 }
-
-// Add new wheel item via admin (label, type, weight)
 document.getElementById("addWheelItemBtn").addEventListener("click", ()=>{
   const label = (document.getElementById("newWheelLabel").value || "").trim();
   const type = document.getElementById("newWheelType").value;
@@ -875,34 +921,60 @@ document.getElementById("addWheelItemBtn").addEventListener("click", ()=>{
   wheelItemsRef.once("value").then(snap=>{
     let arr = snap.val() || [];
     if(!Array.isArray(arr)) arr = [];
-    arr.push({label: label, win: isWin, weight: weight});
+    arr.push({ label: label, win: isWin, weight: weight });
     db.ref("wheelItems").set(arr);
     document.getElementById("newWheelLabel").value = "";
     document.getElementById("newWheelWeight").value = "1";
   });
 });
 
-// ================= REALTIME INFO & WINNERS =================
+// ================= PUBLIC PAGE SUPPORT =================
+document.getElementById("setPublicUrlBtn").addEventListener("click", ()=>{
+  const url = (document.getElementById("publicUrl").value || "").trim();
+  db.ref("settings/publicUrl").set(url);
+  alert("Public URL disimpan.");
+});
+document.getElementById("openPublicBtn").addEventListener("click", ()=>{
+  db.ref("settings/publicUrl").once("value").then(snap=>{
+    const url = (snap.val() || "").trim();
+    const openUrl = url || (window.location.origin + window.location.pathname + '?public=1');
+    window.open(openUrl, "_blank");
+  });
+});
+document.getElementById("copyPublicBtn").addEventListener("click", ()=>{
+  db.ref("settings/publicUrl").once("value").then(snap=>{
+    let url = (snap.val() || "").trim();
+    if(!url) url = window.location.origin + window.location.pathname + '?public=1';
+    if(!url) return alert("Tidak ada URL untuk disalin.");
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(()=> alert("Link publik berhasil disalin ke clipboard."), ()=> alert("Gagal menyalin."));
+    } else {
+      try { const ta=document.createElement('textarea'); ta.value=url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert("Link publik berhasil disalin (fallback)."); } catch(e){ alert("Gagal menyalin link. Salin manual: "+url); }
+    }
+  });
+});
+
+// ================= REALTIME INFO & WINNERS DISPLAY =================
 const infoBoardRef = db.ref("infoBoard");
-infoBoardRef.on("value", snapshot => {
+infoBoardRef.on("value", snapshot=>{
   const info = snapshot.val() || "Belum ada info event";
   document.getElementById("infoBoard").innerHTML = "<b>INFO EVENT:</b><br>" + info;
 });
 
 const winnersRef = db.ref("winners");
-winnersRef.on("value", snapshot => {
+winnersRef.on("value", snapshot=>{
   const winners = snapshot.val() || [];
   if(winners.length === 0){
     document.getElementById("globalWinners").innerHTML = "<b>Pemenang:</b><br>Belum ada pemenang";
   } else {
     let html = "<b>Pemenang:</b><br>";
-    winners.forEach((w, i) => {
+    winners.forEach((w,i) => {
       html += `${i+1}. ${w.name} - ${w.prize} (${w.time})<br>`;
     });
     document.getElementById("globalWinners").innerHTML = html;
   }
 
-  if(winners.length >= MAX_WINNER_GLOBAL && MAX_WINNER_GLOBAL > 0){
+  if(MAX_WINNER_GLOBAL>0 && winners.length >= MAX_WINNER_GLOBAL){
     document.getElementById("winnersStatus").innerText = "⚠️ Pemenang telah tercapai. Event tidak menerima pemenang baru, peserta masih dapat spin namun hasil akan ZONK.";
   } else {
     document.getElementById("winnersStatus").innerText = "";
@@ -911,54 +983,22 @@ winnersRef.on("value", snapshot => {
   document.getElementById("exportStatus").innerText = `Jumlah pemenang sekarang: ${winners.length}`;
 });
 
-updateInfo();
-
-// ================= PUBLIC LINK FUNCTIONS (Admin) =================
-document.getElementById("setPublicUrlBtn").addEventListener("click", ()=>{
-  const url = (document.getElementById("publicUrl").value || "").trim();
-  db.ref("settings/publicUrl").set(url);
-  alert("Public URL disimpan.");
-});
-
-document.getElementById("openPublicBtn").addEventListener("click", ()=>{
-  db.ref("settings/publicUrl").once("value").then(snap=>{
-    const url = (snap.val() || "").trim();
-    const openUrl = url || (window.location.origin + window.location.pathname + '?public=1');
-    window.open(openUrl, "_blank");
+// ================= FREE SPIN NEW USER ALLOCATION =================
+// When user first visits, they should receive the configured free spin (settings.freeSpinNewUser) or default
+(function allocateFreeSpinIfNeeded(){
+  if(localStorage.getItem("claimedFree")) return;
+  // read once settings then assign
+  settingsRef.once("value").then(snap=>{
+    const s = snap.val() || {};
+    const freeVal = (typeof s.freeSpinNewUser !== "undefined") ? (parseInt(s.freeSpinNewUser) || DEFAULT_FREE_SPIN_NEW_USER) : DEFAULT_FREE_SPIN_NEW_USER;
+    spinData[deviceId] = (spinData[deviceId]||0) + freeVal;
+    localStorage.setItem("claimedFree","yes");
+    saveData();
+    updateInfo();
   });
-});
-
-document.getElementById("copyPublicBtn").addEventListener("click", ()=>{
-  db.ref("settings/publicUrl").once("value").then(snap=>{
-    let url = (snap.val() || "").trim();
-    if(!url) url = window.location.origin + window.location.pathname + '?public=1';
-    if(!url) return alert("Tidak ada URL untuk disalin.");
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(url).then(()=> alert("Link publik berhasil disalin ke clipboard."), ()=> {
-        try { 
-          const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-          alert("Link publik berhasil disalin (fallback).");
-        } catch(e){ alert("Gagal menyalin link. Salin manual: " + url); }
-      });
-    } else {
-      try { 
-        const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-        alert("Link publik berhasil disalin (fallback).");
-      } catch(e){ alert("Gagal menyalin link. Salin manual: " + url); }
-    }
-  });
-});
-
-// If this page is loaded with ?public=1 parameter, hide admin unlock (optional UX)
-(function hideAdminIfPublicParam(){
-  try {
-    const params = new URLSearchParams(window.location.search);
-    if(params.get('public') === '1' || params.get('public') === 'true'){
-      // keep adminPanel hidden by default; also prevent accidental admin unlocking by taps
-      document.getElementById('title').addEventListener('click', ()=>{}); // noop to avoid opening admin by taps
-    }
-  } catch(e){}
 })();
+
+updateInfo();
 </script>
 </body>
 </html>
