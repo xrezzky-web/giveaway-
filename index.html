@@ -245,6 +245,18 @@ small{
    <button id="resetCodesBtn">RESET SEMUA CODE</button>
  </div>
 
+ <!-- NEW: Public Link controls -->
+ <div style="margin-top:10px;border-top:1px solid #00ffd5;padding-top:10px;">
+   <div style="font-weight:bold">🔗 Public Page</div>
+   <input id="publicUrl" placeholder="Public Page URL (kosong = default)">
+   <div style="display:flex;gap:6px;">
+     <button id="setPublicUrlBtn">💾 Set Public URL</button>
+     <button id="openPublicBtn">🌐 Buka Halaman Publik</button>
+     <button id="copyPublicBtn">📋 Salin Link</button>
+   </div>
+   <small style="color:#aaa">Bisa gunakan URL kustom atau biarkan kosong untuk menggunakan halaman ini (dengan ?public=1).</small>
+ </div>
+
  <!-- NEW: Wheel Manager -->
  <div id="wheelManager">
    <b>🎡 Wheel Manager</b>
@@ -343,13 +355,21 @@ settingsRef.on("value", snap => {
   if(typeof s.freeSpinNewUser !== "undefined"){
     const v = parseInt(s.freeSpinNewUser);
     ADMIN_FREE_SPIN_NEW_USER = (isNaN(v) ? null : v);
-    // set admin input if present
     const el = document.getElementById("freeSpinNewUser");
     if(el) el.value = ADMIN_FREE_SPIN_NEW_USER !== null ? String(ADMIN_FREE_SPIN_NEW_USER) : "";
   } else {
-    // not set in DB
     ADMIN_FREE_SPIN_NEW_USER = null;
     const el = document.getElementById("freeSpinNewUser");
+    if(el) el.value = "";
+  }
+
+  // NEW: publicUrl sync
+  if(typeof s.publicUrl !== "undefined"){
+    const u = s.publicUrl || "";
+    const el = document.getElementById("publicUrl");
+    if(el) el.value = u;
+  } else {
+    const el = document.getElementById("publicUrl");
     if(el) el.value = "";
   }
 });
@@ -369,30 +389,21 @@ let lastPrize=null;
 
 // FREE SPIN USER BARU
 // Use admin-configured value if available, otherwise fallback to original constant.
-const effectiveFreeSpin = (typeof ADMIN_FREE_SPIN_NEW_USER === "number" && ADMIN_FREE_SPIN_NEW_USER !== null) ? ADMIN_FREE_SPIN_NEW_USER : FREE_SPIN_NEW_USER;
 if(!spinData[deviceId]) spinData[deviceId]=0;
 if(!localStorage.getItem("claimedFree")){
  // When the settingsRef event hasn't fired yet, ADMIN_FREE_SPIN_NEW_USER may be null.
- // To make sure admin setting is applied for future page loads, we check ADMIN_FREE_SPIN_NEW_USER again on settings update.
- const give = (ADMIN_FREE_SPIN_NEW_USER !== null && typeof ADMIN_FREE_SPIN_NEW_USER === "number") ? ADMIN_FREE_SPIN_NEW_USER : FREE_SPIN_NEW_USER;
- spinData[deviceId]+=give;
- localStorage.setItem("claimedFree","yes");
+ // To make sure admin setting is applied for future page loads, we check settings once as well.
+ settingsRef.once("value").then(snap=>{
+   const s = snap.val() || {};
+   const adminVal = (typeof s.freeSpinNewUser !== "undefined") ? parseInt(s.freeSpinNewUser) : null;
+   const give = (adminVal !== null && !isNaN(adminVal)) ? adminVal : FREE_SPIN_NEW_USER;
+   spinData[deviceId]+=give;
+   localStorage.setItem("claimedFree","yes");
+   saveData();
+   updateInfo();
+ });
 }
 if(lockedName){ document.getElementById("name").value=lockedName; document.getElementById("name").disabled=true; }
-
-// If settings later change freeSpinNewUser and the user hasn't claimed yet, ensure they receive the updated amount.
-// (This covers the rare case where settings loaded after initial allocation.)
-settingsRef.once("value").then(snap=>{
-  const s = snap.val() || {};
-  const adminVal = (typeof s.freeSpinNewUser !== "undefined") ? parseInt(s.freeSpinNewUser) : null;
-  if(!localStorage.getItem("claimedFree")){
-    const give = (adminVal !== null && !isNaN(adminVal)) ? adminVal : FREE_SPIN_NEW_USER;
-    spinData[deviceId] = (spinData[deviceId]||0) + give;
-    localStorage.setItem("claimedFree","yes");
-    saveData();
-    updateInfo();
-  }
-});
 
 // LOAD CODES DARI FIREBASE
 db.ref("codes").on("value", snapshot=>{
@@ -617,7 +628,7 @@ document.getElementById("updateInfoBtn").addEventListener("click",()=>{
 // ADD CODE PUBLIK
 document.getElementById("addCodeBtn").addEventListener("click",()=>{
  const newCode=document.getElementById("newCode").value.trim().toUpperCase();
- const spin=parseInt(document.getElementById("newCodeSpin").value)||0;
+ const spin=parseInt(document.getElementById("newCodeSpin") ? document.getElementById("newCodeSpin").value : 0) || 0;
  if(newCode && spin>0){
    db.ref("codes/"+newCode).set(spin);
    alert(`Code ${newCode} ditambahkan ke publik! Spin +${spin}`);
@@ -683,6 +694,34 @@ document.getElementById("copyExportBtn").addEventListener("click", ()=>{
 });
 document.getElementById("closeExportBtn").addEventListener("click", ()=>{
   document.getElementById("exportModal").style.display = "none";
+});
+
+// ================= NEW ADMIN FEATURES IMPLEMENTATION =================
+
+// Toggle event on/off
+document.getElementById("toggleEventBtn").addEventListener("click", ()=>{
+  const newState = !EVENT_ON;
+  db.ref("settings/eventOn").set(newState);
+  alert(`Event telah di${newState ? "ON" : "OFF"}`);
+});
+
+// RESET EVENT button
+document.getElementById("resetEventBtn").addEventListener("click", ()=>{
+  if(!confirm("Reset event?\nIni akan mematikan event, menghapus pemenang dan mereset hitungan hadiah per device.")) return;
+  db.ref("settings/eventOn").set(false);
+  db.ref("winners").set([]);
+  db.ref("deviceWins").set({});
+  hasWon = false;
+  lastPrize = null;
+  localStorage.removeItem("hasWon");
+  alert("Event di-reset dan dimatikan. Data pemenang dan hitungan device telah dihapus.");
+});
+
+// RESET SEMUA CODE button
+document.getElementById("resetCodesBtn").addEventListener("click", ()=>{
+  if(!confirm("Hapus semua kode redeem di Firebase?")) return;
+  db.ref("codes").set({});
+  alert("Semua kode telah dihapus dari Firebase.");
 });
 
 // ================= WHEEL MANAGEMENT (realtime) =================
@@ -873,6 +912,53 @@ winnersRef.on("value", snapshot => {
 });
 
 updateInfo();
+
+// ================= PUBLIC LINK FUNCTIONS (Admin) =================
+document.getElementById("setPublicUrlBtn").addEventListener("click", ()=>{
+  const url = (document.getElementById("publicUrl").value || "").trim();
+  db.ref("settings/publicUrl").set(url);
+  alert("Public URL disimpan.");
+});
+
+document.getElementById("openPublicBtn").addEventListener("click", ()=>{
+  db.ref("settings/publicUrl").once("value").then(snap=>{
+    const url = (snap.val() || "").trim();
+    const openUrl = url || (window.location.origin + window.location.pathname + '?public=1');
+    window.open(openUrl, "_blank");
+  });
+});
+
+document.getElementById("copyPublicBtn").addEventListener("click", ()=>{
+  db.ref("settings/publicUrl").once("value").then(snap=>{
+    let url = (snap.val() || "").trim();
+    if(!url) url = window.location.origin + window.location.pathname + '?public=1';
+    if(!url) return alert("Tidak ada URL untuk disalin.");
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(()=> alert("Link publik berhasil disalin ke clipboard."), ()=> {
+        try { 
+          const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+          alert("Link publik berhasil disalin (fallback).");
+        } catch(e){ alert("Gagal menyalin link. Salin manual: " + url); }
+      });
+    } else {
+      try { 
+        const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        alert("Link publik berhasil disalin (fallback).");
+      } catch(e){ alert("Gagal menyalin link. Salin manual: " + url); }
+    }
+  });
+});
+
+// If this page is loaded with ?public=1 parameter, hide admin unlock (optional UX)
+(function hideAdminIfPublicParam(){
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('public') === '1' || params.get('public') === 'true'){
+      // keep adminPanel hidden by default; also prevent accidental admin unlocking by taps
+      document.getElementById('title').addEventListener('click', ()=>{}); // noop to avoid opening admin by taps
+    }
+  } catch(e){}
+})();
 </script>
 </body>
- </html>
+</html>
