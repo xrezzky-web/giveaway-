@@ -207,6 +207,7 @@ small{
 .admin-row > *{ flex:1; }
 .mode-flag{ display:flex; align-items:center; gap:6px; margin-top:6px; color:#00ffd5; font-weight:bold; }
 .mode-flag input{ width:auto; }
+.small-btn{ padding:8px; font-size:13px; border-radius:6px; }
 </style>
 </head>
 <body>
@@ -262,8 +263,11 @@ small{
  </div>
 
  <div style="display:flex;gap:6px;">
-   <button id="applySettingsBtn">🔁 Terapkan Settings</button>
-   <button id="toggleEventBtn">TURN OFF</button>
+   <button id="applySettingsBtn" class="small-btn">🔁 Terapkan Settings</button>
+   <button id="toggleEventBtn" class="small-btn">TURN OFF</button>
+   <!-- NEW: Separate ON / OFF buttons as requested -->
+   <button id="eventOnBtn" class="small-btn" style="background:#22c55e;color:#000">EVENT ON</button>
+   <button id="eventOffBtn" class="small-btn" style="background:#ef4444;color:#fff">EVENT OFF</button>
  </div>
 
  <div style="margin-top:8px;">
@@ -294,7 +298,7 @@ small{
 
  <div style="margin-top:10px;border-top:1px solid #00ffd5;padding-top:10px;">
    <b>⏱ Schedule (opsional)</b>
-   <div style="font-size:12px;color:#aaa">Jika aktif, event akan otomatis ON/OFF sesuai jadwal.</div>
+   <div style="font-size:12px;color:#aaa">Jika aktif, event akan otomatis ON/OFF sesuai jadwal. Wajib diisi jika Mode Wajib aktif.</div>
    <input id="eventStart" type="datetime-local" placeholder="Tanggal & Jam Mulai">
    <input id="eventEnd" type="datetime-local" placeholder="Tanggal & Jam Berakhir">
    <label style="margin-top:6px;"><input id="enableSchedule" type="checkbox"> Aktifkan Schedule (Auto ON/OFF)</label>
@@ -798,13 +802,11 @@ document.getElementById("modeTesting").addEventListener("change", ()=>{
  if(document.getElementById("modeTesting").checked) db.ref("settings/requireParams").set(false);
 });
 
-// manual toggle ON/OFF
+// manual toggle ON/OFF (legacy toggle button)
 document.getElementById("toggleEventBtn").addEventListener("click", ()=>{
  const current = EVENT_ON;
  // if turning ON and REQUIRE_PARAMS true, validate
  if(!current){
-   // attempting to set ON
-   // ensure required params if mode required
    settingsRef.once("value").then(snap=>{
      const s = snap.val() || {};
      const require = !!s.requireParams;
@@ -822,6 +824,35 @@ document.getElementById("toggleEventBtn").addEventListener("click", ()=>{
  } else {
    db.ref("settings/eventOn").set(false);
  }
+});
+
+// NEW: Separate explicit EVENT ON button
+document.getElementById("eventOnBtn").addEventListener("click", ()=>{
+ // Validate required params if in required mode
+ settingsRef.once("value").then(snap=>{
+   const s = snap.val() || {};
+   const require = !!s.requireParams;
+   if(require && !canEnableEvent()){
+     return alert("Mode Wajib aktif: isi semua parameter (Info event, Max Pemenang Global, Max Hadiah Per Device, Max Spin Per Device) sebelum menyalakan event.");
+   }
+   // If schedule enabled and set, ensure current time is within schedule OR allow override
+   if(SCHEDULE_ENABLED && SCHEDULE_START && SCHEDULE_END){
+     const now = Date.now();
+     if(now < SCHEDULE_START || now > SCHEDULE_END){
+       // Not within scheduled window — but user requested explicit ON; allow explicit on if admin wants
+       if(!confirm("Schedule aktif dan sekarang berada di luar jangka waktu yang ditentukan. Tetap nyalakan event secara manual?")) return;
+     }
+   }
+   db.ref("settings/eventOn").set(true);
+   alert("Event diset ON.");
+ });
+});
+
+// NEW: Separate explicit EVENT OFF button
+document.getElementById("eventOffBtn").addEventListener("click", ()=>{
+ if(!confirm("Matikan event sekarang?")) return;
+ db.ref("settings/eventOn").set(false);
+ alert("Event diset OFF.");
 });
 
 // update info board
@@ -943,9 +974,15 @@ document.getElementById("setScheduleBtn").addEventListener("click", ()=>{
  const startVal = document.getElementById("eventStart").value;
  const endVal = document.getElementById("eventEnd").value;
  const enable = document.getElementById("enableSchedule").checked;
+
+ if(enable && !startVal && !endVal){
+   return alert("Masukkan minimal tanggal mulai atau tanggal berakhir untuk schedule.");
+ }
+
  if(!enable){
    if(!confirm("Anda menonaktifkan schedule. Lanjutkan?")) return;
  }
+
  if(enable && startVal){
    const s = new Date(startVal);
    if(isNaN(s)) return alert("Start datetime tidak valid");
@@ -962,10 +999,34 @@ document.getElementById("setScheduleBtn").addEventListener("click", ()=>{
  db.ref("settings/eventStart").set(SCHEDULE_START);
  db.ref("settings/eventEnd").set(SCHEDULE_END);
 
+ // If enabled and current time inside, try to auto-enable event (respecting required params)
+ if(SCHEDULE_ENABLED && SCHEDULE_START && SCHEDULE_END){
+   const now = Date.now();
+   if(now >= SCHEDULE_START && now <= SCHEDULE_END){
+     // If required mode, validate before auto enabling
+     settingsRef.once("value").then(snap=>{
+       const s = snap.val() || {};
+       const require = !!s.requireParams;
+       if(require && !canEnableEvent()){
+         alert("Schedule disimpan. Namun event tidak bisa otomatis ON karena parameter wajib belum diisi.");
+         db.ref("settings/eventOn").set(false);
+       } else {
+         db.ref("settings/eventOn").set(true);
+         alert("Schedule disimpan. Event otomatis dinyalakan sesuai schedule (sekarang masuk jangka waktu).");
+       }
+     });
+   } else {
+     // outside scheduled window: ensure event is OFF until start
+     db.ref("settings/eventOn").set(false);
+     alert("Schedule disimpan. Event akan otomatis ON saat waktunya tiba.");
+   }
+ } else {
+   alert("Schedule disimpan.");
+ }
+
  // start display & evaluate immediately
  startScheduleDisplay();
  evaluateScheduleAndToggle();
- alert("Schedule disimpan.");
 });
 
 document.getElementById("clearScheduleBtn").addEventListener("click", ()=>{
@@ -1045,4 +1106,4 @@ db.ref("winners").on("value", snap => {
 updateInfo();
 </script>
 </body>
-</html>
+ </html>
