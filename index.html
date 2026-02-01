@@ -216,6 +216,11 @@ small{
 .mode-flag{ display:flex; align-items:center; gap:6px; margin-top:6px; color:#00ffd5; font-weight:bold; }
 .mode-flag input{ width:auto; }
 .small-btn{ padding:8px; font-size:13px; border-radius:6px; }
+
+/* public panel */
+#publicPanel{ display:none; width:100%; margin-top:12px; background:rgba(0,0,0,0.06); border-radius:8px; padding:10px; box-sizing:border-box; text-align:center; }
+#publicPanel .pub-row{ margin-bottom:6px; }
+#publicWinnersList{ text-align:left; max-height:120px; overflow:auto; padding:6px; background:rgba(0,0,0,0.03); border-radius:6px; }
 </style>
 </head>
 <body>
@@ -251,6 +256,17 @@ small{
 <div id="infoBoard"><b>INFO EVENT:</b><br>Loading...</div>
 <div id="globalWinners"><b>Pemenang:</b><br>Loading...</div>
 <div id="winnersStatus"></div>
+
+<!-- Public panel (appears on ?public=1 or when publicUrl matches) -->
+<div id="publicPanel" aria-hidden="true">
+  <div class="pub-row" id="publicStatus"><b>Status:</b> Loading...</div>
+  <div class="pub-row" id="publicSchedule">Waktu event: -</div>
+  <div class="pub-row" id="publicLastWinner">Pemenang terakhir: -</div>
+  <div id="publicWinnersList">Belum ada pemenang</div>
+  <div style="margin-top:8px;">
+    <button id="publicSpinBtn" style="min-width:120px">🌀 SPIN (Publik)</button>
+  </div>
+</div>
 
 <div id="adminPanel">
  <b>🔒 ADMIN PANEL</b>
@@ -1128,6 +1144,146 @@ db.ref("winners").on("value", snap => {
  document.getElementById("exportStatus").innerText = `Jumlah pemenang sekarang: ${winners.length}`;
 });
 updateInfo();
+</script>
+
+<!-- Add-on script (lightweight, non-destructive) -->
+<script>
+(function(){
+  if(typeof db === "undefined") return;
+  const settingsRef = db.ref("settings");
+  const winnersRef = db.ref("winners");
+
+  try{ document.getElementById("eventOnBtn").style.display = 'none'; }catch(e){}
+  try{ document.getElementById("eventOffBtn").style.display = 'none'; }catch(e){}
+
+  function setIndicator(isOn, note){
+    const ind = document.getElementById("eventIndicator");
+    note = note ? (" — " + note) : "";
+    if(ind){
+      if(isOn){ ind.innerText = "EVENT: ON" + note; ind.style.background="#16a34a"; ind.style.color="#000"; }
+      else { ind.innerText = "EVENT: OFF" + note; ind.style.background="#ef4444"; ind.style.color="#fff"; }
+    }
+    const pubStatus = document.getElementById("publicStatus");
+    if(pubStatus){
+      pubStatus.innerHTML = `<b>Status:</b> <span style="padding:4px 8px;border-radius:6px;background:${isOn? '#16a34a':'#ef4444'};color:${isOn? '#000':'#fff'}">${isOn? 'ON':'OFF'}</span>`;
+    }
+  }
+
+  const oldToggle = document.getElementById("toggleEventBtn");
+  if(oldToggle){
+    const newToggle = oldToggle.cloneNode(true);
+    oldToggle.parentNode.replaceChild(newToggle, oldToggle);
+    newToggle.addEventListener("click", ()=>{
+      settingsRef.once("value").then(snap=>{
+        const s = snap.val()||{};
+        const cur = !!s.eventOn;
+        if(!cur){
+          const require = !!s.requireParams;
+          if(require){
+            const info = (document.getElementById("adminInfo").value || "").trim();
+            const mwg = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
+            const mwd = parseInt(document.getElementById("maxWinDevice").value) || 0;
+            const msp = parseInt(document.getElementById("maxSpinDevice").value) || 0;
+            if(!info || mwg<=0 || mwd<=0 || msp<=0){
+              return alert("Mode Wajib aktif: isi semua parameter sebelum menyalakan event.");
+            }
+          }
+          settingsRef.child('eventOn').set(true);
+        } else {
+          settingsRef.child('eventOn').set(false);
+        }
+      }).catch(()=>{});
+    });
+  }
+
+  try{
+    const pubSpin = document.getElementById("publicSpinBtn");
+    if(pubSpin) pubSpin.addEventListener("click", ()=>{ const name = document.getElementById("name").value.trim(); if(!name) return alert("Isi nama sebelum spin (publik)."); document.getElementById("spinBtn").click(); });
+  }catch(e){}
+
+  const params = new URLSearchParams(window.location.search);
+  const IS_PUBLIC = params.get('public') === '1';
+  function showPublicPanel(){
+    const p = document.getElementById("publicPanel");
+    if(!p) return;
+    p.style.display = 'block';
+    p.setAttribute('aria-hidden','false');
+    const adm = document.getElementById("adminPanel");
+    if(adm) adm.style.display = 'none';
+    try{ document.getElementById("title").onclick = ()=>{}; }catch(e){}
+  }
+  if(IS_PUBLIC) showPublicPanel();
+
+  settingsRef.on("value", snap=>{
+    const s = snap.val() || {};
+    const on = !!s.eventOn;
+    setIndicator(on);
+    PUBLIC_URL = s.publicUrl || "";
+    if(IS_PUBLIC) showPublicPanel();
+    else if(PUBLIC_URL && window.location.href.indexOf(PUBLIC_URL) !== -1) showPublicPanel();
+    const pubSchedule = document.getElementById("publicSchedule");
+    if(pubSchedule){
+      const start = Number(s.eventStart) || 0;
+      const end = Number(s.eventEnd) || 0;
+      if(start && end) pubSchedule.innerText = `Event waktu: ${new Date(start).toLocaleString()} → ${new Date(end).toLocaleString()}`;
+      else if(start) pubSchedule.innerText = `Event mulai: ${new Date(start).toLocaleString()}`;
+      else if(end) pubSchedule.innerText = `Event berakhir: ${new Date(end).toLocaleString()}`;
+      else pubSchedule.innerText = "Waktu event: belum diset";
+    }
+  });
+
+  winnersRef.on("value", snap=>{
+    const v = snap.val() || [];
+    const items = Array.isArray(v) ? v.filter(Boolean) : Object.values(v || {});
+    const count = items.length;
+    const pubList = document.getElementById("publicWinnersList");
+    if(pubList){
+      pubList.innerHTML = "";
+      if(items.length === 0) pubList.innerText = "Belum ada pemenang";
+      else items.slice(0,30).forEach((w,i)=>{
+        const d = document.createElement("div");
+        d.style.padding="3px 0";
+        d.style.fontSize="13px";
+        d.innerText = `${i+1}. ${w.name} - ${w.prize} (${w.time||''})`;
+        pubList.appendChild(d);
+      });
+    }
+    let lastTs = 0;
+    items.forEach(it=>{
+      if(it && it.time){
+        const t = new Date(it.time).getTime();
+        if(!isNaN(t)) lastTs = Math.max(lastTs, t);
+      }
+    });
+    if(lastTs){
+      const formatted = new Date(lastTs).toLocaleString();
+      const el = document.getElementById("eventScheduleInfo");
+      if(el) el.innerText = `Pemenang terakhir: ${formatted}`;
+      const plw = document.getElementById("publicLastWinner");
+      if(plw) plw.innerText = `Pemenang terakhir: ${formatted}`;
+    } else {
+      const plw = document.getElementById("publicLastWinner");
+      if(plw) plw.innerText = `Pemenang terakhir: -`;
+    }
+    const full = (MAX_WINNER_GLOBAL > 0 && count >= MAX_WINNER_GLOBAL);
+    if(full){
+      document.getElementById("winnersStatus").innerText = "⚠️ Event selesai, pemenang penuh, waktu sudah habis";
+      try{ document.getElementById("claimBtn").style.display = "none"; }catch(e){}
+      settingsRef.once('value').then(snapSettings=>{
+        const s = snapSettings.val() || {};
+        const now = lastTs || Date.now();
+        const need = (!!s.eventOn) || !(s.eventEnd) || Number(s.eventEnd) < now-1000;
+        if(need) db.ref("settings").update({ eventOn: false, eventEnd: now }).catch(()=>{});
+      }).catch(()=>{});
+      setIndicator(false, "Pemenang penuh");
+      const pubSchedule = document.getElementById("publicSchedule");
+      if(pubSchedule) pubSchedule.innerText = `Event selesai: pemenang penuh (${new Date((lastTs||Date.now())).toLocaleString()})`;
+    } else {
+      document.getElementById("winnersStatus").innerText = "";
+    }
+  });
+
+})();
 </script>
 </body>
  </html>
