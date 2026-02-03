@@ -229,6 +229,31 @@ small{
  width:100%;
  align-self:center;
 }
+
+/* NEW: timer status color classes (do not change existing colors/layout) */
+.event-timer-status.green{ background:#16a34a; color:#000; padding:6px 10px; border-radius:8px; display:inline-block; font-weight:bold; }
+.event-timer-status.yellow{ background:#f59e0b; color:#000; padding:6px 10px; border-radius:8px; display:inline-block; font-weight:bold; }
+.event-timer-status.red{ background:#ef4444; color:#fff; padding:6px 10px; border-radius:8px; display:inline-block; font-weight:bold; }
+.event-timer-status.gray{ background:#334155; color:#fff; padding:6px 10px; border-radius:8px; display:inline-block; font-weight:bold; }
+
+/* Modal for winner details */
+#winnerModal{
+ display:none;
+ position:fixed;
+ left:0; top:0; width:100%; height:100%;
+ background:rgba(0,0,0,0.6);
+ z-index:10000;
+ align-items:center; justify-content:center;
+}
+#winnerContent{
+ width:320px; background:#071414; border:1px solid #00ffd5; padding:12px; border-radius:8px; color:#fff;
+}
+.winner-row{ margin:6px 0; padding:6px; background:rgba(255,255,255,0.02); border-radius:6px; }
+
+/* Admin lock overlay */
+#adminLockOverlay{
+ position:absolute; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.6); display:none; z-index:999; border-radius:10px;
+}
 </style>
 </head>
 <body>
@@ -286,6 +311,7 @@ small{
  <div class="mode-flag">
    <label><input type="radio" name="mode" id="modeTesting" value="testing"> Testing</label>
    <label><input type="radio" name="mode" id="modeRequired" value="required"> Wajib Isi</label>
+   <!-- NEW mode (added dynamically if missing) -->
  </div>
 
  <textarea id="adminInfo" placeholder="Tulis info event disini..."></textarea>
@@ -303,7 +329,7 @@ small{
  <div style="display:flex;gap:6px;">
    <button id="applySettingsBtn" class="small-btn">🔁 Terapkan Settings</button>
    <button id="toggleEventBtn" class="small-btn">TURN OFF</button>
-   <!-- Separate ON / OFF buttons as requested -->
+   <!-- Separate ON / OFF buttons as requested (kept but hidden by script to enforce single toggle) -->
    <button id="eventOnBtn" class="small-btn" style="background:#22c55e;color:#000">EVENT ON</button>
    <button id="eventOffBtn" class="small-btn" style="background:#ef4444;color:#fff">EVENT OFF</button>
  </div>
@@ -367,6 +393,10 @@ small{
  </div>
 
 </div>
+
+<!-- small admin overlay element (used when admin panel locked) -->
+<div id="adminLockOverlay" aria-hidden="true"></div>
+
 </div>
 
 <!-- EXPORT MODAL -->
@@ -379,6 +409,17 @@ small{
      <button id="closeExportBtn">Tutup</button>
    </div>
  </div>
+</div>
+
+<!-- WINNER DETAIL MODAL (interactive panel) -->
+<div id="winnerModal">
+  <div id="winnerContent">
+    <div style="font-weight:bold;margin-bottom:8px">Detail Pemenang</div>
+    <div id="winnerList"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button id="closeWinnerModal">Tutup</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -639,13 +680,20 @@ function weightedPickIndex(indices){
 
 // check required params before enabling event
 function canEnableEvent(){
-  if(!REQUIRE_PARAMS) return true;
+  // Extended: support event mode stored in settings as 'eventMode' with "testing","official","secret"
+  const mode = (document.querySelector('input[name="mode"]:checked')||{}).value || (window.EVENT_MODE || 'testing');
+  if(mode === 'testing') return true;
   const info = (document.getElementById("adminInfo").value || "").trim();
   const mwg = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
   const mwd = parseInt(document.getElementById("maxWinDevice").value) || 0;
   const msp = parseInt(document.getElementById("maxSpinDevice").value) || 0;
-  if(!info || mwg<=0 || mwd<=0 || msp<=0){
-    return false;
+  // event resmi requires all limits
+  if(mode === 'official'){
+    if(!info || mwg<=0 || mwd<=0 || msp<=0) return false;
+  }
+  // secret mode: require limits but hides prize labels on public UI
+  if(mode === 'secret'){
+    if(!info || mwg<=0 || mwd<=0) return false;
   }
   return true;
 }
@@ -667,72 +715,94 @@ function evaluateScheduleAndToggle(){
   db.ref("settings/eventOn").set(shouldBeOn);
 }
 
-// countdown display
-function startScheduleDisplay(){
-  if(scheduleTimerInterval) clearInterval(scheduleTimerInterval);
-  scheduleTimerInterval = setInterval(()=>{
-    if(!SCHEDULE_START && !SCHEDULE_END){
-      document.getElementById("eventScheduleInfo").innerText = "";
-      document.getElementById("eventTimer").innerText = "";
-      return;
+// countdown display enhanced to fulfill state/color rules
+function updateEventTimerUI(){
+  const now = Date.now();
+  const timerEl = document.getElementById("eventTimer");
+  const scheduleEl = document.getElementById("eventScheduleInfo");
+  const ind = document.getElementById("eventIndicator");
+  if(!timerEl || !scheduleEl) return;
+
+  // If event explicitly turned OFF by admin, hide timer per requirement
+  if(!EVENT_ON){
+    timerEl.style.display = 'none';
+    scheduleEl.style.display = 'none';
+    return;
+  } else {
+    timerEl.style.display = '';
+    scheduleEl.style.display = '';
+  }
+
+  if(SCHEDULE_START && SCHEDULE_END){
+    const before = now < SCHEDULE_START;
+    const during = now >= SCHEDULE_START && now <= SCHEDULE_END;
+    const after = now > SCHEDULE_END;
+
+    scheduleEl.innerText = `Event waktu: ${new Date(SCHEDULE_START).toLocaleString()} → ${new Date(SCHEDULE_END).toLocaleString()}`;
+
+    if(before){
+      // EVENT BELUM MULAI
+      const diff = SCHEDULE_START - now;
+      timerEl.innerHTML = `<span class="event-timer-status green">🟢 Event akan segera dimulai</span> <div style="margin-top:6px">${formatTimeParts(diff)}</div>`;
+      if(ind){ ind.innerText = "EVENT: COMING SOON"; ind.style.background="#16a34a"; ind.style.color="#000"; }
+    } else if(during){
+      const diff = SCHEDULE_END - now;
+      // critical threshold: if remaining < 5 min => warning yellow; last 10s -> red
+      if(diff <= 10000){
+        timerEl.innerHTML = `<span class="event-timer-status red">⛔ DETIK TERAKHIR</span> <div style="margin-top:6px">${formatTimeParts(diff)}</div>`;
+      } else if(diff <= 5*60*1000){
+        timerEl.innerHTML = `<span class="event-timer-status yellow">⚠️ EVENT AKAN BERAKHIR</span> <div style="margin-top:6px">${formatTimeParts(diff)}</div>`;
+      } else {
+        timerEl.innerHTML = `<span class="event-timer-status green">⏰ EVENT BERJALAN</span> <div style="margin-top:6px">${formatTimeParts(diff)}</div>`;
+      }
+      if(ind){ ind.innerText = "EVENT: ON"; ind.style.background="#16a34a"; ind.style.color="#000"; }
+    } else if(after){
+      timerEl.innerHTML = `<span class="event-timer-status gray">🛑 EVENT SELESAI</span> <div style="margin-top:6px">❌ Event telah berakhir</div>`;
+      if(ind){ ind.innerText = "EVENT: ENDED"; ind.style.background="#334155"; ind.style.color="#fff"; }
+      // Optionally enforce EVENT_OFF in Firebase if schedule ended
+      // Do not auto-turn off if admin wants; we keep logic minimal
     }
-    const now = Date.now();
-    let infoText = "";
-    if(SCHEDULE_START && SCHEDULE_END){
-      infoText = `Event waktu: ${new Date(SCHEDULE_START).toLocaleString()} → ${new Date(SCHEDULE_END).toLocaleString()}`;
-      document.getElementById("eventScheduleInfo").innerText = infoText;
-      if(now < SCHEDULE_START){
-        const diff = SCHEDULE_START - now;
-        document.getElementById("eventTimer").innerText = `Mulai dalam: ${formatDuration(diff)}`;
-      } else if(now >= SCHEDULE_START && now <= SCHEDULE_END){
-        const diff = SCHEDULE_END - now;
-        document.getElementById("eventTimer").innerText = `Berakhir dalam: ${formatDuration(diff)}`;
-      } else {
-        document.getElementById("eventTimer").innerText = `Event sudah berakhir`;
-      }
-    } else if(SCHEDULE_START && !SCHEDULE_END){
-      infoText = `Event mulai: ${new Date(SCHEDULE_START).toLocaleString()}`;
-      document.getElementById("eventScheduleInfo").innerText = infoText;
-      if(now < SCHEDULE_START){
-        document.getElementById("eventTimer").innerText = `Mulai dalam: ${formatDuration(SCHEDULE_START - now)}`;
-      } else {
-        document.getElementById("eventTimer").innerText = `Event aktif (tidak ada waktu akhir)`;
-      }
-    } else if(!SCHEDULE_START && SCHEDULE_END){
-      infoText = `Event berakhir: ${new Date(SCHEDULE_END).toLocaleString()}`;
-      document.getElementById("eventScheduleInfo").innerText = infoText;
-      if(now <= SCHEDULE_END){
-        document.getElementById("eventTimer").innerText = `Berakhir dalam: ${formatDuration(SCHEDULE_END - now)}`;
-      } else {
-        document.getElementById("eventTimer").innerText = `Event sudah berakhir`;
-      }
-    }
-  }, 1000);
+  } else {
+    // No schedule: show a neutral message when event is ON
+    timerEl.innerHTML = `<span class="event-timer-status green">${EVENT_ON? '⏰ EVENT BERJALAN':'🛑 EVENT MATI'}</span>`;
+  }
 }
 
-function formatDuration(ms){
-  if(ms <= 0) return "0 detik";
-  const s = Math.floor(ms/1000);
+// utility to format ms into day/hours/mins/secs vertical style per requirement
+function formatTimeParts(ms){
+  const s = Math.max(0, Math.floor(ms/1000));
   const days = Math.floor(s/(3600*24));
   const hours = Math.floor((s%(3600*24))/3600);
   const mins = Math.floor((s%3600)/60);
   const secs = s%60;
-  let parts = [];
-  if(days) parts.push(days + " hari");
-  if(hours) parts.push(hours + " jam");
-  if(mins) parts.push(mins + " menit");
-  if(secs) parts.push(secs + " detik");
-  return parts.join(" ");
+  return `${days} Hari ${pad(hours)} Jam ${pad(mins)} Menit ${pad(secs)} Detik`;
 }
+function pad(v){ return (v<10? '0'+v : ''+v); }
+
+function startScheduleDisplay(){
+  if(scheduleTimerInterval) clearInterval(scheduleTimerInterval);
+  scheduleTimerInterval = setInterval(()=>{
+    updateEventTimerUI();
+  }, 1000);
+  updateEventTimerUI();
+}
+startScheduleDisplay();
 
 // periodically evaluate schedule to auto-toggle if enabled
 setInterval(()=>{ if(SCHEDULE_ENABLED) evaluateScheduleAndToggle(); }, 5000);
-startScheduleDisplay();
 
 // ================= SPIN =================
+// Anti-abuse: minimum interval between spins in ms
+const MIN_SPIN_INTERVAL_MS = 1500;
 let rot=0, lock=false;
 document.getElementById("spinBtn").addEventListener("click", ()=>{
  if(lock) return;
+ // anti-refresh / rapid spin check
+ const lastSpin = parseInt(localStorage.getItem("lastSpinTime_"+deviceId) || "0",10);
+ const now = Date.now();
+ if(now - lastSpin < MIN_SPIN_INTERVAL_MS) return alert("Jangan spam spin. Tunggu sebentar.");
+ localStorage.setItem("lastSpinTime_"+deviceId, String(now));
+
  if((spinData[deviceId]||0) <= 0) return alert("Spin kamu habis!");
  const name = document.getElementById("name").value.trim();
  if(!name) return alert("Isi nama!");
@@ -741,6 +811,7 @@ document.getElementById("spinBtn").addEventListener("click", ()=>{
  spinData[deviceId] = (spinData[deviceId]||0) - 1;
  saveData(); updateInfo();
 
+ // stronger RNG check using weights (already present) but ensure secret mode hides prize labels publicly
  db.ref("winners").once("value").then(snapshot=>{
    const winnersData = snapshot.val() || [];
    db.ref("deviceWins/"+deviceId).once("value").then(dwSnap=>{
@@ -773,7 +844,16 @@ document.getElementById("spinBtn").addEventListener("click", ()=>{
      setTimeout(()=> {
        lock = false;
        lastPrize = prizes[idx];
-       document.getElementById("result").innerText = `🎉 ${lockedName} mendapatkan ${lastPrize.label}`;
+       let displayLabel = lastPrize.label;
+       // If Event Mode is secret and client is public, hide label in display message
+       const mode = (document.querySelector('input[name="mode"]:checked')||{}).value || (window.EVENT_MODE || 'testing');
+       const params = new URLSearchParams(window.location.search);
+       const IS_PUBLIC = params.get('public') === '1';
+       if(mode === 'secret' && IS_PUBLIC){
+         displayLabel = "HADIAH (tersembunyi)";
+       }
+
+       document.getElementById("result").innerText = `🎉 ${lockedName} mendapatkan ${displayLabel}`;
        document.getElementById("log").innerHTML += `<div>${lockedName} → ${lastPrize.label}</div>`;
 
        if(lastPrize.win && !hasWon && EVENT_ON){
@@ -840,6 +920,39 @@ document.getElementById("title").addEventListener("click", ()=>{
  }
 });
 
+// Apply: ensure single main toggle, hide separate eventOn/eventOff buttons (but keep them in DOM)
+try{
+  document.getElementById("eventOnBtn").style.display = 'none';
+  document.getElementById("eventOffBtn").style.display = 'none';
+}catch(e){}
+
+// Add third mode radio (Event Rahasia) dynamically if not present
+(function ensureSecretMode(){
+  if(document.getElementById('modeSecret')) return;
+  try{
+    const container = document.querySelector('.mode-flag');
+    if(container){
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = 'mode'; input.id = 'modeSecret'; input.value = 'secret';
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(' Event Rahasia'));
+      container.appendChild(label);
+    }
+  }catch(e){}
+})();
+
+// store event mode in settings; sync from settings on load
+settingsRef.child('eventMode').once('value').then(snap=>{
+  const mode = snap.val() || '';
+  if(mode){
+    const el = document.getElementById('mode'+capitalize(mode));
+    if(el) el.checked = true;
+    window.EVENT_MODE = mode;
+  }
+}).catch(()=>{});
+function capitalize(s){ if(!s) return s; return s[0].toUpperCase()+s.slice(1); }
+
 // apply settings
 document.getElementById("applySettingsBtn").addEventListener("click", ()=>{
  const mwg = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
@@ -848,72 +961,97 @@ document.getElementById("applySettingsBtn").addEventListener("click", ()=>{
  const freeNew = parseInt(document.getElementById("freeSpinNewUser").value);
  const freeVal = (isNaN(freeNew) ? null : freeNew);
 
- db.ref("settings/maxWinnerGlobal").set(mwg);
- db.ref("settings/maxWinPerDevice").set(mwd);
- db.ref("settings/maxSpinPerUser").set(msp);
- if(freeVal !== null) db.ref("settings/freeSpinNewUser").set(freeVal);
-
- alert("Settings disimpan ke Firebase.");
+ // Save in one atomic update
+ const mode = (document.querySelector('input[name="mode"]:checked')||{}).value || 'testing';
+ const updates = {
+   'maxWinnerGlobal': mwg,
+   'maxWinPerDevice': mwd,
+   'maxSpinPerUser': msp
+ };
+   if(freeVal !== null) updates['freeSpinNewUser'] = freeVal;
+   updates['eventMode'] = mode;
+ db.ref("settings").update(updates).then(()=> {
+   alert("Settings disimpan ke Firebase.");
+ }).catch(()=> alert("Gagal menyimpan settings."));
 });
 
-// mode toggles
-document.getElementById("modeRequired").addEventListener("change", ()=>{
- if(document.getElementById("modeRequired").checked) db.ref("settings/requireParams").set(true);
-});
-document.getElementById("modeTesting").addEventListener("change", ()=>{
- if(document.getElementById("modeTesting").checked) db.ref("settings/requireParams").set(false);
-});
-
-// manual toggle ON/OFF (legacy toggle button)
-document.getElementById("toggleEventBtn").addEventListener("click", ()=>{
- const current = EVENT_ON;
- // if turning ON and REQUIRE_PARAMS true, validate
- if(!current){
-   settingsRef.once("value").then(snap=>{
-     const s = snap.val() || {};
-     const require = !!s.requireParams;
-     if(require){
-       const info = (document.getElementById("adminInfo").value || "").trim();
-       const mwg = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
-       const mwd = parseInt(document.getElementById("maxWinDevice").value) || 0;
-       const msp = parseInt(document.getElementById("maxSpinDevice").value) || 0;
-       if(!info || mwg<=0 || mwd<=0 || msp<=0){
-         return alert("Mode Wajib aktif: isi semua parameter (Info event, Max Pemenang Global, Max Hadiah Per Device, Max Spin Per Device) sebelum menyalakan event.");
-       }
-     }
-     db.ref("settings/eventOn").set(!current);
-   });
- } else {
-   db.ref("settings/eventOn").set(false);
- }
+// mode toggles -> reflect to Firebase
+document.querySelectorAll('input[name="mode"]').forEach(r=>{
+  r.addEventListener('change', ()=>{
+    const val = r.value;
+    db.ref("settings/eventMode").set(val);
+    // If switched to 'official' (required), both validate and store requireParams true
+    if(val === 'official') db.ref("settings/requireParams").set(true);
+    else db.ref("settings/requireParams").set(false);
+  });
 });
 
-// NEW: Separate explicit EVENT ON button
-document.getElementById("eventOnBtn").addEventListener("click", ()=>{
- // Validate required params if in required mode
- settingsRef.once("value").then(snap=>{
-   const s = snap.val() || {};
-   const require = !!s.requireParams;
-   if(require && !canEnableEvent()){
-     return alert("Mode Wajib aktif: isi semua parameter (Info event, Max Pemenang Global, Max Hadiah Per Device, Max Spin Per Device) sebelum menyalakan event.");
-   }
-   // If schedule enabled and set, ensure current time is within schedule OR allow override
-   if(SCHEDULE_ENABLED && SCHEDULE_START && SCHEDULE_END){
-     const now = Date.now();
-     if(now < SCHEDULE_START || now > SCHEDULE_END){
-       if(!confirm("Schedule aktif dan sekarang berada di luar jangka waktu yang ditentukan. Tetap nyalakan event secara manual?")) return;
-     }
-   }
-   db.ref("settings/eventOn").set(true);
-   alert("Event diset ON.");
- });
-});
+// Replace / enforce toggleEventBtn behavior so we only have one control (legacy replaced)
+(function replaceMainToggle(){
+  const old = document.getElementById('toggleEventBtn');
+  if(!old) return;
+  const clone = old.cloneNode(true);
+  old.parentNode.replaceChild(clone, old);
+  clone.addEventListener('click', ()=>{
+    // read current mode from settings to decide validation
+    settingsRef.once('value').then(snap=>{
+      const s = snap.val() || {};
+      const cur = !!s.eventOn;
+      const mode = s.eventMode || ((document.querySelector('input[name="mode"]:checked')||{}).value || 'testing');
+      if(!cur){ // trying to turn ON
+        // Validate if official/required
+        if(mode === 'official'){
+          const info = (document.getElementById("adminInfo").value || "").trim();
+          const mwg = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
+          const mwd = parseInt(document.getElementById("maxWinDevice").value) || 0;
+          const msp = parseInt(document.getElementById("maxSpinDevice").value) || 0;
+          if(!info || mwg<=0 || mwd<=0 || msp<=0){
+            return alert("Mode Event Resmi aktif: isi semua parameter sebelum menyalakan event.");
+          }
+        }
+        // if schedule enabled and outside window, warn admin
+        if(SCHEDULE_ENABLED && SCHEDULE_START && SCHEDULE_END){
+          const now = Date.now();
+          if(now < SCHEDULE_START || now > SCHEDULE_END){
+            if(!confirm("Schedule aktif dan sekarang berada di luar jangka waktu yang ditentukan. Tetap nyalakan event secara manual?")) return;
+          }
+        }
+        db.ref("settings/eventOn").set(true);
+        // lock admin panel when event is ON
+        lockAdminPanel(true);
+      } else {
+        db.ref("settings/eventOn").set(false);
+        lockAdminPanel(false);
+      }
+    });
+  });
+})();
 
-// NEW: Separate explicit EVENT OFF button
-document.getElementById("eventOffBtn").addEventListener("click", ()=>{
- if(!confirm("Matikan event sekarang?")) return;
- db.ref("settings/eventOn").set(false);
- alert("Event diset OFF.");
+// admin lock overlay helper
+function lockAdminPanel(locked){
+  const overlay = document.getElementById('adminLockOverlay');
+  if(!overlay) return;
+  if(locked){
+    overlay.style.display = 'block';
+    overlay.setAttribute('aria-hidden','false');
+    // disable inputs inside adminPanel
+    Array.from(document.querySelectorAll('#adminPanel input, #adminPanel button, #adminPanel textarea, #adminPanel select')).forEach(el=>{
+      el.disabled = true;
+    });
+  } else {
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden','true');
+    Array.from(document.querySelectorAll('#adminPanel input, #adminPanel button, #adminPanel textarea, #adminPanel select')).forEach(el=>{
+      el.disabled = false;
+    });
+  }
+}
+
+// If event toggled by other clients, reflect lock state locally
+settingsRef.child('eventOn').on('value', snap=>{
+  const val = !!snap.val();
+  if(val) lockAdminPanel(true);
+  else lockAdminPanel(false);
 });
 
 // update info board
@@ -923,17 +1061,24 @@ document.getElementById("updateInfoBtn").addEventListener("click", ()=>{
  alert("Info event diperbarui!");
 });
 
-// reset all data (special)
+// reset all data (special) - extended to ensure security & data clearing as requested
 document.getElementById("resetAllDataBtn").addEventListener("click", ()=>{
- if(!confirm("⚠️ Data user, spin, dan pemenang akan terhapus semua. Lanjutkan?")) return;
- // set reset timestamp in settings so clients know
+ if(!confirm("⚠️ Semua data user, spin, dan pemenang akan terhapus permanen. Lanjutkan?")) return;
  const t = Date.now();
- db.ref("settings/resetAllTimestamp").set(t);
- // reset winners and deviceWins on firebase
- db.ref("winners").set([]);
- db.ref("deviceWins").set({});
- // update local state for admin (note: codes remain)
- alert("Semua data spin & pemenang dihapus. Kode redeem tetap ada.");
+ // set event off first and then clear
+ db.ref("settings").update({ resetAllTimestamp: t, eventOn: false, eventEnd: t }).then(()=>{
+   db.ref("winners").set([]);
+   db.ref("deviceWins").set({});
+   db.ref("codes").set({}); // reset codes, as user requested all codes reset
+   // Also clear localStorage marker to prevent stale data
+   localStorage.removeItem("spinData");
+   localStorage.removeItem("usedCodes");
+   localStorage.removeItem("hasWon");
+   localStorage.removeItem("lockedName");
+   localStorage.removeItem("totalSpin");
+   localStorage.setItem("lastResetAll", String(t));
+   alert("Semua data telah direset. Event dimatikan.");
+ }).catch(()=> alert("Gagal mereset data."));
 });
 
 // other resets
@@ -951,7 +1096,7 @@ document.getElementById("addCodeBtn").addEventListener("click", ()=>{
 });
 document.getElementById("resetCodesBtn").addEventListener("click", ()=>{ if(confirm("Hapus semua kode redeem di Firebase?")){ db.ref("codes").set({}); alert("Semua kode dihapus."); }});
 
-// wheel manager functions
+// wheel manager functions (already present) - kept intact
 function renderWheelListUI(items){
  const container = document.getElementById("wheelList");
  container.innerHTML = "";
@@ -1158,19 +1303,46 @@ db.ref("winners").on("value", snap => {
  if(!winners || winners.length===0) document.getElementById("globalWinners").innerHTML = "<b>Pemenang:</b><br>Belum ada pemenang";
  else {
    let html = "<b>Pemenang:</b><br>";
-   winners.forEach((w,i)=> html += `${i+1}. ${w.name} - ${w.prize} (${w.time})<br>`);
+   winners.forEach((w,i)=> html += `<div class="winner-entry" data-index="${i}" style="cursor:pointer;padding:6px;border-bottom:1px solid rgba(255,255,255,0.02)">${i+1}. ${w.name} - ${w.prize} (${w.time})</div>`);
    document.getElementById("globalWinners").innerHTML = html;
  }
  if(MAX_WINNER_GLOBAL>0 && winners.length >= MAX_WINNER_GLOBAL){
    document.getElementById("winnersStatus").innerText = "⚠️ Pemenang telah tercapai. Event tidak menerima pemenang baru, peserta masih dapat spin namun hasil akan ZONK.";
  } else document.getElementById("winnersStatus").innerText = "";
  document.getElementById("exportStatus").innerText = `Jumlah pemenang sekarang: ${winners.length}`;
+
+ // attach click handlers to winner entries to open modal with details
+ setTimeout(()=>{ // small delay to ensure DOM updated
+   const entries = document.querySelectorAll('#globalWinners .winner-entry');
+   entries.forEach(el=>{
+     el.removeEventListener('click', showWinnerModalByIndex);
+     el.addEventListener('click', showWinnerModalByIndex);
+   });
+ }, 50);
 });
 updateInfo();
-</script>
 
-<!-- Add-on script (lightweight, non-destructive) -->
-<script>
+// show winner modal by reading index and showing data from firebase snapshot
+function showWinnerModalByIndex(e){
+  const idx = Number(e.currentTarget.getAttribute('data-index'));
+  db.ref('winners').once('value').then(snap=>{
+    const arr = snap.val() || [];
+    const w = arr[idx];
+    const list = document.getElementById('winnerList');
+    list.innerHTML = '';
+    if(w){
+      const div = document.createElement('div'); div.className='winner-row';
+      div.innerHTML = `<b>Nama:</b> ${w.name}<br><b>Hadiah:</b> ${w.prize}<br><b>Waktu:</b> ${w.time||'-'}`;
+      list.appendChild(div);
+    } else {
+      list.innerHTML = '<i>Tidak ditemukan detail pemenang</i>';
+    }
+    document.getElementById('winnerModal').style.display = 'flex';
+  }).catch(()=>{ alert('Gagal memuat detail pemenang.'); });
+}
+document.getElementById('closeWinnerModal').addEventListener('click', ()=>{ document.getElementById('winnerModal').style.display = 'none'; });
+
+// ================= ADD-ONS: public panel, timer sync and safety =================
 (function(){
   if(typeof db === "undefined") return;
   const settingsRef = db.ref("settings");
@@ -1201,14 +1373,14 @@ updateInfo();
         const s = snap.val()||{};
         const cur = !!s.eventOn;
         if(!cur){
-          const require = !!s.requireParams;
+          const require = !!s.eventMode && s.eventMode === 'official';
           if(require){
             const info = (document.getElementById("adminInfo").value || "").trim();
             const mwg = parseInt(document.getElementById("maxWinnerGlobal").value) || 0;
             const mwd = parseInt(document.getElementById("maxWinDevice").value) || 0;
             const msp = parseInt(document.getElementById("maxSpinDevice").value) || 0;
             if(!info || mwg<=0 || mwd<=0 || msp<=0){
-              return alert("Mode Wajib aktif: isi semua parameter sebelum menyalakan event.");
+              return alert("Mode Event Resmi aktif: isi semua parameter sebelum menyalakan event.");
             }
           }
           settingsRef.child('eventOn').set(true);
@@ -1252,6 +1424,31 @@ updateInfo();
       else if(start) pubSchedule.innerText = `Event mulai: ${new Date(start).toLocaleString()}`;
       else if(end) pubSchedule.innerText = `Event berakhir: ${new Date(end).toLocaleString()}`;
       else pubSchedule.innerText = "Waktu event: belum diset";
+    }
+
+    // If eventMode === 'secret' and this is a public page, obfuscate wheel labels by overlay
+    const mode = s.eventMode || 'testing';
+    window.EVENT_MODE = mode;
+    if(IS_PUBLIC && mode === 'secret'){
+      // Mask wheel by covering canvas labels (simple approach: overlay a semi-transparent cover)
+      const wheelBox = document.getElementById('wheelBox');
+      if(wheelBox && !document.getElementById('secretCover')){
+        const cover = document.createElement('div');
+        cover.id = 'secretCover';
+        cover.style.position = 'absolute';
+        cover.style.left = '0';
+        cover.style.top = '0';
+        cover.style.width = '100%';
+        cover.style.height = '100%';
+        cover.style.background = 'linear-gradient(90deg, rgba(7,20,20,0.6), rgba(2,11,11,0.6))';
+        cover.style.borderRadius = '50%';
+        cover.style.zIndex = '20';
+        cover.title = 'Hadiah disembunyikan (Event Rahasia)';
+        wheelBox.appendChild(cover);
+      }
+    } else {
+      const cover = document.getElementById('secretCover');
+      if(cover) cover.remove();
     }
 
     // Jika admin melakukan resetAllTimestamp, bersihkan juga area jadwal di publik dan di atas wheel
@@ -1304,7 +1501,6 @@ updateInfo();
     }
     const full = (MAX_WINNER_GLOBAL > 0 && count >= MAX_WINNER_GLOBAL);
     if(full){
-      document.getElementById("winnersStatus").innerText = "⚠️ Event selesai, pemenang penuh, waktu sudah habis";
       try{ document.getElementById("claimBtn").style.display = "none"; }catch(e){}
       settingsRef.once('value').then(snapSettings=>{
         const s = snapSettings.val() || {};
