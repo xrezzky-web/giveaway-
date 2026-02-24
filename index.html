@@ -1284,12 +1284,28 @@ document.getElementById("exportBtn").addEventListener("click", ()=>{
  });
 });
 document.getElementById("copyExportBtn").addEventListener("click", ()=>{
- const text = document.getElementById("exportArea").value || "";
- if(!text) return alert("Tidak ada yang disalin.");
- if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=> alert("Teks pemenang disalin.")); }
- else { const ta=document.getElementById("exportArea"); ta.select(); try{ document.execCommand('copy'); alert("Teks pemenang disalin (fallback)."); }catch(e){ alert("Gagal salin. Salin manual."); } }
+ const text = document.getElementById("exportArea").value;
+ if(!text) return alert("Tidak ada data untuk disalin.");
+
+ if(navigator.clipboard && navigator.clipboard.writeText){
+   navigator.clipboard.writeText(text)
+     .then(()=> alert("Data berhasil disalin!"))
+     .catch(()=> alert("Gagal menyalin data."));
+ } else {
+   // fallback
+   const ta = document.createElement("textarea");
+   ta.value = text;
+   document.body.appendChild(ta);
+   ta.select();
+   document.execCommand("copy");
+   document.body.removeChild(ta);
+   alert("Data berhasil disalin (fallback).");
+ }
 });
-document.getElementById("closeExportBtn").addEventListener("click", ()=>{ document.getElementById("exportModal").style.display = "none"; });
+
+document.getElementById("closeExportBtn").addEventListener("click", ()=>{
+ document.getElementById("exportModal").style.display = "none";
+});
 
 // ================= REALTIME WINNERS & INFO =================
 db.ref("infoBoard").on("value", snap => {
